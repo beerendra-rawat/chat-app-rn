@@ -1,5 +1,4 @@
-// src/screens/auth/LoginScreen.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -86,7 +85,7 @@ export default function LoginScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   form: {
-    paddingHorizontal: 24,
+    // paddingHorizontal: 24,
     flex: 1,
   },
   forgotContainer: {

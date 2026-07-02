@@ -32,7 +32,7 @@ export default function PasswordResetScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: 24,
-    marginTop: 24,
+    // paddingHorizontal: 24,
+    // marginTop: 24,
   },
 });

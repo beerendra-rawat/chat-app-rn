@@ -60,8 +60,8 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   content: {
-    paddingHorizontal: 24,
-    marginTop: 8,
+    // paddingHorizontal: 24,
+    // marginTop: 8,
   },
   bottomContainer: {
     flexDirection: 'row',

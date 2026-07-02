@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   form: {
-    paddingHorizontal: 24,
+    // paddingHorizontal: 24,
   },
   bottomContainer: {
     flexDirection: 'row',

@@ -53,7 +53,7 @@ export default function ForgotPasswordScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: 24,
-    marginTop: 8,
+    // paddingHorizontal: 24,
+    // marginTop: 8,
   },
 });
