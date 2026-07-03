@@ -1,18 +1,35 @@
-import React from 'react';
-import { View, Text, Button } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { RootStackScreenProps } from '../../navigation/types';
+import React, { useState } from "react";
+import { View, Text } from "react-native";
+import AppContainer from "../../components/common/AppContainer";
+import SearchBar from "../../components/common/SearchBar";
 
 export default function PeopleScreen() {
-  const navigation = useNavigation<RootStackScreenProps<'ChatDetail'>['navigation']>();
+  const [search, setSearch] = useState("");
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>People Screen</Text>
-      <Button
-        title="Go to Chat Detail"
-        onPress={() => navigation.navigate('ChatDetail', { chatId: '123' })}
+    <AppContainer>
+      <SearchBar
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search people..."
       />
-    </View>
+
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 28,
+            fontWeight: "700",
+          }}
+        >
+          💬 People Screen
+        </Text>
+      </View>
+    </AppContainer>
   );
 }
