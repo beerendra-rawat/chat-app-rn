@@ -1,8 +1,5 @@
-// src/navigation/RootNavigator.tsx
-import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAppSelector } from "../redux/store/hooks";
-
 import TabNavigator from "./TabNavigator";
 
 // Auth Screens
