@@ -1,5 +1,3 @@
-// src/hooks/useAuth.ts
-
 import { useEffect } from "react";
 import {
   onAuthStateChanged,
@@ -15,6 +13,8 @@ import {
 } from "@react-native-google-signin/google-signin";
 
 import { auth } from "../config/firebase";
+import { registerUser } from "../services/auth.service";
+
 import { useAppDispatch } from "../redux/store/hooks";
 import {
   logout,
@@ -26,13 +26,7 @@ import {
 export const useAuth = () => {
   const dispatch = useAppDispatch();
 
-  /**
-   * ----------------------------------------------------
-   * Listen Firebase Authentication State
-   * ----------------------------------------------------
-   * Automatically updates Redux whenever the user
-   * logs in, logs out, or the app restores a session.
-   */
+  //Firebase Authentication Listener
   useEffect(() => {
     console.log("🔥 Auth Listener Started");
 
@@ -54,100 +48,16 @@ export const useAuth = () => {
     };
   }, [dispatch]);
 
-  /**
-   * ----------------------------------------------------
-   * Email & Password Login
-   * ----------------------------------------------------
-   */
+  //Email Login
   const loginWithEmail = async (email: string, password: string) => {
-    console.log("📧 Starting Email Login...");
-
     dispatch(setLoading(true));
 
     try {
-      const { user } = await signInWithEmailAndPassword(auth, email, password);
-
-      console.log("✅ Email Login Successful");
-      console.log("👤 UID:", user.uid);
-
-      dispatch(setUser(user));
-
-      return user;
-    } catch (error: any) {
-      const message =
-        error.code === "auth/invalid-credential"
-          ? "Invalid email or password."
-          : error.message;
-
-      console.log("❌ Email Login Failed");
-      console.log("Reason:", message);
-
-      dispatch(setError(message));
-      throw error;
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
-
-  /**
-   * Clear previous Google session.
-   * Prevents automatic account selection.
-   */
-  const resetGoogleSession = async () => {
-    try {
-      console.log("🧹 Clearing previous Google session...");
-
-      await GoogleSignin.signOut();
-      await GoogleSignin.revokeAccess();
-    } catch {
-      console.log("ℹ️ No previous Google session found");
-    }
-  };
-
-  /**
-   * Extract Google ID Token safely.
-   */
-  const getIdToken = (response: any) =>
-    response?.idToken ?? response?.data?.idToken;
-
-  /**
-   * ----------------------------------------------------
-   * Google Sign In
-   * ----------------------------------------------------
-   */
-  const loginWithGoogle = async () => {
-    console.log("🚀 Starting Google Login...");
-
-    dispatch(setLoading(true));
-
-    try {
-      await resetGoogleSession();
-
-      await GoogleSignin.hasPlayServices({
-        showPlayServicesUpdateDialog: true,
-      });
-
-      console.log("✅ Google Play Services Available");
-
-      const response = await GoogleSignin.signIn();
-
-      console.log("📥 Google account selected");
-
-      const idToken = getIdToken(response);
-
-      if (!idToken) {
-        throw new Error("Google ID Token not found.");
-      }
-
-      console.log("🔑 Google ID Token Received");
-
-      const credential = GoogleAuthProvider.credential(idToken);
-
-      const { user } = await signInWithCredential(auth, credential);
-
-      console.log("✅ Firebase Google Authentication Successful");
-      console.log("👤 UID:", user.uid);
-      console.log("📧 Email:", user.email);
+      const { user } = await signInWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password,
+      );
 
       dispatch(setUser(user));
 
@@ -156,8 +66,101 @@ export const useAuth = () => {
       let message = error.message;
 
       switch (error.code) {
+        case "auth/invalid-credential":
+          message = "Invalid email or password.";
+          break;
+
+        case "auth/user-not-found":
+          message = "User not found.";
+          break;
+
+        case "auth/wrong-password":
+          message = "Incorrect password.";
+          break;
+      }
+
+      dispatch(setError(message));
+      throw error;
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
+  //Email Signup
+  const signupWithEmail = async (
+    fullName: string,
+    email: string,
+    password: string,
+  ) => {
+    dispatch(setLoading(true));
+
+    try {
+      const user = await registerUser(fullName, email.trim(), password);
+
+      dispatch(setUser(user));
+
+      return user;
+    } catch (error: any) {
+      let message = error.message;
+
+      switch (error.code) {
+        case "auth/email-already-in-use":
+          message = "Email already exists.";
+          break;
+
+        case "auth/invalid-email":
+          message = "Invalid email address.";
+          break;
+
+        case "auth/weak-password":
+          message = "Password must be at least 6 characters.";
+          break;
+      }
+
+      dispatch(setError(message));
+      throw error;
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
+  //Reset Google Session
+  const resetGoogleSession = async () => {
+    try {
+      await GoogleSignin.signOut();
+      await GoogleSignin.revokeAccess();
+    } catch {
+      // Ignore if no previous session exists
+    }
+  };
+
+  //Google Sign In
+  const loginWithGoogle = async () => {
+    dispatch(setLoading(true));
+
+    try {
+      await resetGoogleSession();
+
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+      const response = await GoogleSignin.signIn();
+      if (response.type !== "success" || !response.data?.idToken) {
+        throw new Error("Google ID Token not found.");
+      }
+      const idToken = response.data.idToken;
+      const credential = GoogleAuthProvider.credential(idToken);
+      const { user } = await signInWithCredential(auth, credential);
+
+      dispatch(setUser(user));
+
+      return user;
+    } catch (error: any) {
+      let message = "Google Sign-In failed.";
+
+      switch (error.code) {
         case statusCodes.SIGN_IN_CANCELLED:
-          message = "Google Sign-In cancelled by user.";
+          message = "Google Sign-In cancelled.";
           break;
 
         case statusCodes.IN_PROGRESS:
@@ -167,10 +170,18 @@ export const useAuth = () => {
         case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
           message = "Google Play Services not available.";
           break;
-      }
 
-      console.log("❌ Google Login Failed");
-      console.log("Reason:", message);
+        case "auth/account-exists-with-different-credential":
+          message = "An account already exists with another sign-in method.";
+          break;
+
+        case "auth/network-request-failed":
+          message = "Please check your internet connection.";
+          break;
+
+        default:
+          message = error.message || message;
+      }
 
       dispatch(setError(message));
 
@@ -180,27 +191,18 @@ export const useAuth = () => {
     }
   };
 
-  /**
-   * ----------------------------------------------------
-   * Logout User
-   * ----------------------------------------------------
-   */
+  //Logout
   const signOut = async () => {
-    console.log("🚪 Signing out user...");
-
     dispatch(setLoading(true));
 
     try {
       await firebaseSignOut(auth);
-      await resetGoogleSession();
 
-      console.log("✅ User Logged Out Successfully");
+      await resetGoogleSession();
 
       dispatch(logout());
     } catch (error: any) {
-      console.log("❌ Logout Failed");
-      console.log("Reason:", error.message);
-
+      dispatch(setError(error.message));
       dispatch(logout());
     } finally {
       dispatch(setLoading(false));
@@ -209,6 +211,7 @@ export const useAuth = () => {
 
   return {
     loginWithEmail,
+    signupWithEmail,
     loginWithGoogle,
     signOut,
   };

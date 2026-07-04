@@ -1,4 +1,3 @@
-// src/screens/LoginScreen.tsx
 import { useState } from "react";
 import {
   View,
@@ -19,7 +18,7 @@ import SocialButton from "../../components/auth/SocialButton";
 
 import { validateLoginForm } from "../../utils/validation";
 import { useAuth } from "../../hooks/useAuth";
-import { useAppSelector } from "../../redux/store/hooks"; // ← Fixed import path
+import { useAppSelector } from "../../redux/store/hooks";
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState("");

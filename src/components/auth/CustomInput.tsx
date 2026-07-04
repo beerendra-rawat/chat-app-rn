@@ -1,11 +1,13 @@
-import { View, Text, TextInput, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  type TextInputProps,
+} from "react-native";
 
-type Props = {
+type Props = TextInputProps & {
   label: string;
-  placeholder?: string;
-  value: string;
-  onChangeText?: (text: string) => void;
-  keyboardType?: any;
   error?: string;
   multiline?: boolean;
   editable?: boolean;
@@ -22,6 +24,7 @@ export default function CustomInput({
   multiline = false,
   editable = true,
   style,
+  ...rest
 }: Props) {
   return (
     <View style={styles.container}>
@@ -35,6 +38,7 @@ export default function CustomInput({
         keyboardType={keyboardType}
         editable={editable}
         multiline={multiline}
+        {...rest}
         style={[
           styles.input,
           multiline && styles.multiline,

@@ -1,22 +1,14 @@
-// src/redux/slice/authSlice.ts
-
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { User } from "firebase/auth";
 
-/**
- * ----------------------------------------------------
- * Authentication State
- * ----------------------------------------------------
- */
+//Authentication State
 interface AuthState {
   user: User | null;
   loading: boolean;
   error: string | null;
 }
 
-/**
- * Initial Authentication State
- */
+//Initial Authentication State
 const initialState: AuthState = {
   user: null,
   loading: false,
@@ -28,9 +20,7 @@ const authSlice = createSlice({
   initialState,
 
   reducers: {
-    /**
-     * Save authenticated user
-     */
+    //Save authenticated user
     setUser: (state, { payload }: PayloadAction<User | null>) => {
       console.log("✅ Redux | User Updated");
 
@@ -46,9 +36,7 @@ const authSlice = createSlice({
       state.error = null;
     },
 
-    /**
-     * Toggle loading state
-     */
+    //Toggle loading state
     setLoading: (state, { payload }: PayloadAction<boolean>) => {
       console.log(`⏳ Redux | Loading: ${payload}`);
 
@@ -57,9 +45,7 @@ const authSlice = createSlice({
       if (payload) state.error = null;
     },
 
-    /**
-     * Save authentication error
-     */
+    //Save authentication error
     setError: (state, { payload }: PayloadAction<string>) => {
       console.log("❌ Redux | Auth Error");
       console.log("Reason:", payload);
@@ -68,9 +54,7 @@ const authSlice = createSlice({
       state.loading = false;
     },
 
-    /**
-     * Clear authentication state
-     */
+    //Clear authentication state
     logout: (state) => {
       console.log("🚪 Redux | User Logged Out");
 
