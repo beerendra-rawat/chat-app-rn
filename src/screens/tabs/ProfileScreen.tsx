@@ -1,5 +1,3 @@
-// src/screens/profile/ProfileScreen.tsx
-import React, { useState, useEffect } from "react";
 import {
   Alert,
   Image,
@@ -13,49 +11,28 @@ import { Ionicons } from "@expo/vector-icons";
 import AppContainer from "../../components/common/AppContainer";
 import CustomInput from "../../components/auth/CustomInput";
 import PrimaryButton from "../../components/auth/PrimaryButton";
-
-import { useAppSelector } from "../../redux/store/hooks"; // ← Fixed import path
+import { useAppSelector } from "../../redux/store/hooks";
 import { useAuth } from "../../hooks/useAuth";
+import { useProfile } from "../../hooks/useProfile";
 
 export default function ProfileScreen({ navigation }: any) {
   const { user } = useAppSelector((state) => state.auth);
   const { signOut } = useAuth();
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState("");
-  const [bio, setBio] = useState("");
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-
-  // Populate data from Firebase Auth
-  useEffect(() => {
-    if (user) {
-      const displayName =
-        user.displayName || (user.email ? user.email.split("@")[0] : "User");
-
-      setName(displayName);
-      setBio("React Native Developer • Traveller • Nature Lover");
-
-      if (user.photoURL) {
-        setProfileImage(user.photoURL);
-      }
-    }
-  }, [user]);
-
-  const handleAvatarPress = () => {
-    if (!isEditing) return;
-    Alert.alert(
-      "Profile Image",
-      "Image picker coming soon (expo-image-picker).",
-    );
-  };
-
-  const handleSave = () => {
-    setIsEditing(false);
-    Alert.alert("Success", "Profile updated successfully.");
-  };
+  const {
+    isEditing,
+    setIsEditing,
+    fullName,
+    setFullName,
+    bio,
+    setBio,
+    profileImage,
+    pickImage,
+    saveProfile,
+    saving,
+  } = useProfile();
 
   const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to sign out?", [
+    Alert.alert("Logout", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Logout",
@@ -63,24 +40,20 @@ export default function ProfileScreen({ navigation }: any) {
         onPress: async () => {
           try {
             await signOut();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Login" }],
-            });
-          } catch (error: any) {
-            Alert.alert("Logout Failed", error.message || "Please try again.");
+            navigation.reset({ index: 0, routes: [{ name: "Login" }] });
+          } catch (e: any) {
+            Alert.alert("Error", e.message);
           }
         },
       },
     ]);
   };
 
-  // Fallback while user data is loading or not available
   if (!user) {
     return (
       <AppContainer>
         <View style={styles.centered}>
-          <Text>No user data available</Text>
+          <Text>Loading profile...</Text>
         </View>
       </AppContainer>
     );
@@ -92,12 +65,12 @@ export default function ProfileScreen({ navigation }: any) {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* Edit Button */}
         <View style={styles.header}>
           <TouchableOpacity
-            activeOpacity={0.8}
             style={styles.editButton}
-            onPress={() => (isEditing ? handleSave() : setIsEditing(true))}
+            onPress={() => (isEditing ? saveProfile() : setIsEditing(true))}
+            disabled={saving}
           >
             <Ionicons
               name={isEditing ? "checkmark" : "create-outline"}
@@ -109,10 +82,9 @@ export default function ProfileScreen({ navigation }: any) {
 
         {/* Avatar */}
         <TouchableOpacity
-          activeOpacity={0.9}
-          disabled={!isEditing}
-          onPress={handleAvatarPress}
           style={styles.avatarContainer}
+          onPress={isEditing ? pickImage : undefined}
+          activeOpacity={0.8}
         >
           {profileImage ? (
             <Image source={{ uri: profileImage }} style={styles.avatar} />
@@ -124,25 +96,23 @@ export default function ProfileScreen({ navigation }: any) {
 
           {isEditing && (
             <View style={styles.cameraButton}>
-              <Ionicons name="camera" size={18} color="#fff" />
+              <Ionicons name="camera" size={20} color="#fff" />
             </View>
           )}
         </TouchableOpacity>
 
-        {/* View Mode */}
+        {/* Name & Bio */}
         {!isEditing ? (
           <>
-            <Text style={styles.name}>{name}</Text>
-            <Text style={styles.bio}>{bio}</Text>
+            <Text style={styles.name}>{fullName}</Text>
+            <Text style={styles.bio}>{bio || "No bio yet"}</Text>
           </>
         ) : (
-          /* Edit Mode */
           <View style={styles.form}>
             <CustomInput
               label="Full Name"
-              placeholder="Enter your name"
-              value={name}
-              onChangeText={setName}
+              value={fullName}
+              onChangeText={setFullName}
             />
             <CustomInput
               label="Bio"
@@ -150,13 +120,13 @@ export default function ProfileScreen({ navigation }: any) {
               value={bio}
               onChangeText={setBio}
               multiline
+              numberOfLines={4}
             />
           </View>
         )}
 
         <View style={{ flex: 1 }} />
 
-        {/* Cool Logout Button */}
         <PrimaryButton
           title="Logout"
           onPress={handleLogout}
@@ -168,14 +138,10 @@ export default function ProfileScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 20,
-  },
+  container: { flexGrow: 1, padding: 20 },
   header: {
     width: "100%",
-    flexDirection: "row",
-    justifyContent: "flex-end",
+    alignItems: "flex-end",
     marginBottom: 20,
   },
   editButton: {
@@ -188,18 +154,18 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
     elevation: 5,
   },
   avatarContainer: {
     alignSelf: "center",
     marginBottom: 25,
+    position: "relative",
   },
   avatar: {
     width: 150,
     height: 150,
     borderRadius: 75,
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: "#fff",
   },
   avatarPlaceholder: {
@@ -209,49 +175,37 @@ const styles = StyleSheet.create({
     backgroundColor: "#ECECEC",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: "#fff",
   },
   cameraButton: {
     position: "absolute",
-    right: 4,
-    bottom: 4,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    right: 8,
+    bottom: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "#4F46E5",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
   },
   name: {
     fontSize: 26,
     fontWeight: "700",
-    color: "#111827",
     textAlign: "center",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   bio: {
-    fontSize: 15.5,
+    fontSize: 16,
     color: "#6B7280",
     textAlign: "center",
     lineHeight: 24,
     paddingHorizontal: 20,
   },
-  form: {
-    marginTop: 10,
-  },
+  form: { marginTop: 10, gap: 16 },
   logoutButton: {
     backgroundColor: "#EF4444",
-    marginTop: 30,
-    shadowColor: "#EF4444",
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    marginTop: 40,
   },
   centered: {
     flex: 1,
