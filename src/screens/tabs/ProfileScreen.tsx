@@ -26,7 +26,7 @@ export default function ProfileScreen({ navigation }: any) {
     bio,
     setBio,
     profileImage,
-    pickImage,
+    handleAvatarPress, // ✅ replaces pickImage
     saveProfile,
     saving,
   } = useProfile();
@@ -83,7 +83,7 @@ export default function ProfileScreen({ navigation }: any) {
         {/* Avatar */}
         <TouchableOpacity
           style={styles.avatarContainer}
-          onPress={isEditing ? pickImage : undefined}
+          onPress={isEditing ? handleAvatarPress : undefined}
           activeOpacity={0.8}
         >
           {profileImage ? (

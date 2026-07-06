@@ -33,7 +33,7 @@ export const useProfile = () => {
         if (profile) {
           setFullName(profile.fullName || initialName);
           setBio(profile.bio || "");
-          if (profile.photoURL) setProfileImage(profile.photoURL);
+          setProfileImage(profile.photoURL || null); // ✅ also clears if removed
         }
       },
     );
@@ -71,6 +71,28 @@ export const useProfile = () => {
     }
   };
 
+  // ✅ New: remove profile image (cleared locally, saved on next saveProfile call)
+  const removeImage = () => {
+    setProfileImage(null);
+  };
+
+  // ✅ New: show options when camera button is tapped
+  const handleAvatarPress = () => {
+    const options: any[] = [{ text: "Change Photo", onPress: pickImage }];
+
+    if (profileImage) {
+      options.push({
+        text: "Remove Photo",
+        style: "destructive",
+        onPress: removeImage,
+      });
+    }
+
+    options.push({ text: "Cancel", style: "cancel" });
+
+    Alert.alert("Profile Photo", "Choose an option", options);
+  };
+
   const saveProfile = async () => {
     if (!user) return;
     setSaving(true);
@@ -100,6 +122,8 @@ export const useProfile = () => {
     setBio,
     profileImage,
     pickImage,
+    removeImage,
+    handleAvatarPress,
     saveProfile,
     saving,
   };
