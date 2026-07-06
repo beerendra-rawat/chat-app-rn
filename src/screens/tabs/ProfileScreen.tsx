@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator, // ✅ new import
   Alert,
   Image,
   ScrollView,
@@ -26,9 +27,10 @@ export default function ProfileScreen({ navigation }: any) {
     bio,
     setBio,
     profileImage,
-    handleAvatarPress, // ✅ replaces pickImage
+    handleAvatarPress,
     saveProfile,
     saving,
+    uploadingImage, // ✅ new
   } = useProfile();
 
   const handleLogout = () => {
@@ -83,8 +85,9 @@ export default function ProfileScreen({ navigation }: any) {
         {/* Avatar */}
         <TouchableOpacity
           style={styles.avatarContainer}
-          onPress={isEditing ? handleAvatarPress : undefined}
+          onPress={isEditing && !uploadingImage ? handleAvatarPress : undefined}
           activeOpacity={0.8}
+          disabled={uploadingImage} // ✅ prevent tapping while uploading
         >
           {profileImage ? (
             <Image source={{ uri: profileImage }} style={styles.avatar} />
@@ -94,7 +97,14 @@ export default function ProfileScreen({ navigation }: any) {
             </View>
           )}
 
-          {isEditing && (
+          {/* ✅ Loader overlay while uploading */}
+          {uploadingImage && (
+            <View style={styles.avatarOverlay}>
+              <ActivityIndicator size="large" color="#fff" />
+            </View>
+          )}
+
+          {isEditing && !uploadingImage && (
             <View style={styles.cameraButton}>
               <Ionicons name="camera" size={20} color="#fff" />
             </View>
@@ -177,6 +187,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 4,
     borderColor: "#fff",
+  },
+  // ✅ New: dark overlay + spinner on top of the avatar
+  avatarOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   cameraButton: {
     position: "absolute",

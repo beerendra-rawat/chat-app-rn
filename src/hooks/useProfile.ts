@@ -19,6 +19,7 @@ export const useProfile = () => {
   const [bio, setBio] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false); // ✅ new
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -33,7 +34,7 @@ export const useProfile = () => {
         if (profile) {
           setFullName(profile.fullName || initialName);
           setBio(profile.bio || "");
-          setProfileImage(profile.photoURL || null); // ✅ also clears if removed
+          setProfileImage(profile.photoURL || null);
         }
       },
     );
@@ -59,7 +60,7 @@ export const useProfile = () => {
 
       if (result.canceled || !result.assets?.[0]) return;
 
-      setSaving(true);
+      setUploadingImage(true); // ✅ show loader
       const imageUrl = await uploadToCloudinary(result.assets[0].uri);
       setProfileImage(imageUrl);
       Alert.alert("✅ Success", "Image uploaded successfully!");
@@ -67,16 +68,14 @@ export const useProfile = () => {
       console.error("Image Upload Error:", error);
       Alert.alert("Error", error.message || "Failed to upload image");
     } finally {
-      setSaving(false);
+      setUploadingImage(false); // ✅ hide loader
     }
   };
 
-  // ✅ New: remove profile image (cleared locally, saved on next saveProfile call)
   const removeImage = () => {
     setProfileImage(null);
   };
 
-  // ✅ New: show options when camera button is tapped
   const handleAvatarPress = () => {
     const options: any[] = [{ text: "Change Photo", onPress: pickImage }];
 
@@ -121,10 +120,9 @@ export const useProfile = () => {
     bio,
     setBio,
     profileImage,
-    pickImage,
-    removeImage,
     handleAvatarPress,
     saveProfile,
     saving,
+    uploadingImage, // ✅ expose to UI
   };
 };
