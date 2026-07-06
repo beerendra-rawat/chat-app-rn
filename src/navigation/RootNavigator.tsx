@@ -11,6 +11,7 @@ import PasswordResetScreen from "../screens/auth/PasswordResetScreen";
 import UpdatePasswordScreen from "../screens/auth/UpdatePasswordScreen";
 import SuccessScreen from "../screens/auth/SuccessScreen";
 import AccountCreateMessageScreen from "../screens/auth/AccountCreateMessageScreen";
+import ViewImageScreen from "../screens/common/ViewImageScreen";
 
 const RootStack = createNativeStackNavigator();
 
@@ -29,6 +30,12 @@ export default function RootNavigator() {
         animation: "fade_from_bottom",
       }}
     >
+      <RootStack.Screen
+        name="ViewImage"
+        component={ViewImageScreen}
+        options={{ headerShown: false, presentation: "fullScreenModal" }}
+      />
+
       {user ? (
         <RootStack.Screen
           name="MainTabs"

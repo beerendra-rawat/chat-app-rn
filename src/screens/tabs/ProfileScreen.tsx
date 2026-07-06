@@ -85,9 +85,18 @@ export default function ProfileScreen({ navigation }: any) {
         {/* Avatar */}
         <TouchableOpacity
           style={styles.avatarContainer}
-          onPress={isEditing && !uploadingImage ? handleAvatarPress : undefined}
+          onPress={
+            isEditing
+              ? !uploadingImage
+                ? handleAvatarPress
+                : undefined
+              : profileImage
+                ? () =>
+                    navigation.navigate("ViewImage", { imageUri: profileImage })
+                : undefined
+          }
           activeOpacity={0.8}
-          disabled={uploadingImage} // ✅ prevent tapping while uploading
+          disabled={uploadingImage}
         >
           {profileImage ? (
             <Image source={{ uri: profileImage }} style={styles.avatar} />
