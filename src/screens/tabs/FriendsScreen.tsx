@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  RefreshControl, // ✅ add
 } from "react-native";
 import AppContainer from "../../components/common/AppContainer";
 import SearchBar from "../../components/common/SearchBar";
@@ -21,14 +22,22 @@ type Tab = "requests" | "friends";
 export default function FriendsScreen() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<Tab>("requests");
+  const [refreshing, setRefreshing] = useState(false); // ✅ add
 
   const friendIds = useAppSelector((state) => state.friends.friends);
   const receivedIds = useAppSelector((state) => state.friends.receivedRequests);
 
-  const { data: friends = [], isLoading: loadingFriends } =
-    useUserProfiles(friendIds);
-  const { data: requests = [], isLoading: loadingRequests } =
-    useUserProfiles(receivedIds);
+  const {
+    data: friends = [],
+    isLoading: loadingFriends,
+    refetch: refetchFriends, // ✅ add
+  } = useUserProfiles(friendIds);
+
+  const {
+    data: requests = [],
+    isLoading: loadingRequests,
+    refetch: refetchRequests, // ✅ add
+  } = useUserProfiles(receivedIds);
 
   const { acceptRequest, rejectRequest, removeFriend } = useFriendMutations();
 
@@ -48,6 +57,16 @@ export default function FriendsScreen() {
   );
 
   const loading = tab === "requests" ? loadingRequests : loadingFriends;
+
+  // ✅ Pull-to-refresh: refetches both lists regardless of active tab
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchFriends(), refetchRequests()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchFriends, refetchRequests]);
 
   return (
     <AppContainer>
@@ -81,7 +100,7 @@ export default function FriendsScreen() {
         </TouchableOpacity>
       </View>
 
-      {loading ? (
+      {loading && !refreshing ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary || "#007AFF"} />
         </View>
@@ -103,6 +122,14 @@ export default function FriendsScreen() {
               onRemove={(uid) => removeFriend.mutate(uid)}
             />
           )}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={[Colors.primary || "#007AFF"]}
+              tintColor={Colors.primary || "#007AFF"}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.centered}>
               <Text style={styles.emptyText}>
