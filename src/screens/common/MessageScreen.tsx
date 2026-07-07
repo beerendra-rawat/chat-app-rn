@@ -1,95 +1,83 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  RefreshControl,
   StyleSheet,
   View,
 } from "react-native";
-
+import { useIsFocused } from "@react-navigation/native"; // ✅ add
 import AppContainer from "../../components/common/AppContainer";
 import EmptyChat from "../../components/chat/EmptyChat";
 import MessageHeader from "../../components/chat/MessageHeader";
 import MessageInput from "../../components/chat/MessageInput";
-import TypingIndicator from "../../components/chat/TypingIndicator";
 import MessageBubble from "../../components/chat/MessageBubble";
+import { RootStackScreenProps } from "../../navigation/types";
+import { Message } from "../../types/chat";
+import { chatService } from "../../services/chat.service";
+import { useChatMessages } from "../../hooks/useChatMessages";
+import { useAppSelector } from "../../redux/store/hooks";
+import { usePresence } from "../../hooks/usePresence";
 
-interface Message {
-  id: string;
-  text: string;
-  senderId: string;
-  createdAt: number;
-  isRead: boolean;
-}
+type Props = RootStackScreenProps<"ChatDetail">;
 
-const CURRENT_USER = "1";
+export default function MessageScreen({ navigation, route }: Props) {
+  const { chatId, otherUserId, otherUserName, otherUserAvatar } = route.params;
 
-export default function MessageScreen({ navigation }: any) {
-  const listRef = useRef<FlatList>(null);
-
-  const [refreshing, setRefreshing] = useState(false);
-
-  const [typing] = useState(true);
-
+  const currentUid = useAppSelector((state) => state.auth.user?.uid);
+  const { messages, loading } = useChatMessages(chatId);
   const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const { isOnline, lastSeenLabel } = usePresence(otherUserId);
+  const isFocused = useIsFocused(); // ✅ add — only mark read while this screen is actually visible
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      text: "Hello 👋",
-      senderId: "2",
-      createdAt: Date.now(),
-      isRead: true,
-    },
-    {
-      id: "2",
-      text: "Hi, how are you?",
-      senderId: CURRENT_USER,
-      createdAt: Date.now(),
-      isRead: true,
-    },
-  ]);
+  useEffect(() => {
+    if (!currentUid || !otherUserId) return;
+    chatService
+      .ensureChatDocument(chatId, currentUid, otherUserId)
+      .catch((err) => console.error("Failed to ensure chat document:", err));
+  }, [chatId, currentUid, otherUserId]);
 
-  const onRefresh = () => {
-    setRefreshing(true);
+  // ✅ new — mark incoming messages as read whenever the message list updates
+  // AND the screen is focused (don't mark read from a push notification preview, etc.)
+  useEffect(() => {
+    if (!currentUid || !isFocused || !messages.length) return;
 
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  };
+    const hasUnread = messages.some(
+      (m) => !m.isRead && m.senderId !== currentUid,
+    );
+    if (!hasUnread) return;
 
-  const sendMessage = () => {
-    if (!text.trim()) return;
+    chatService
+      .markMessagesAsRead(chatId, currentUid)
+      .catch((err) => console.error("Failed to mark messages as read:", err));
+  }, [messages, currentUid, isFocused, chatId]);
 
-    const message: Message = {
-      id: Date.now().toString(),
-      text,
-      senderId: CURRENT_USER,
-      createdAt: Date.now(),
-      isRead: false,
-    };
-
-    setMessages((prev) => [message, ...prev]);
-
+  const sendMessage = async () => {
+    if (!text.trim() || !currentUid || sending) return;
+    const outgoing = text;
     setText("");
+    setSending(true);
+    try {
+      await chatService.sendMessage(chatId, currentUid, outgoing);
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      setText(outgoing);
+    } finally {
+      setSending(false);
+    }
   };
 
   const renderItem = ({ item }: { item: Message }) => (
-    <MessageBubble
-      message={item}
-      isMyMessage={item.senderId === CURRENT_USER}
-    />
+    <MessageBubble message={item} isMyMessage={item.senderId === currentUid} />
   );
 
   const content = useMemo(() => {
-    if (!messages.length) {
+    if (!loading && !messages.length) {
       return <EmptyChat />;
     }
-
     return (
       <FlatList
-        ref={listRef}
         inverted
         data={messages}
         renderItem={renderItem}
@@ -97,13 +85,9 @@ export default function MessageScreen({ navigation }: any) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListFooterComponent={typing ? <TypingIndicator /> : null}
       />
     );
-  }, [messages, refreshing, typing]);
+  }, [messages, loading, currentUid]);
 
   return (
     <AppContainer noHorizontalPadding noVerticalPadding>
@@ -112,22 +96,20 @@ export default function MessageScreen({ navigation }: any) {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <MessageHeader
-          name="John Doe"
-          image={null}
-          isOnline
+          name={otherUserName}
+          image={otherUserAvatar}
+          isOnline={isOnline}
+          lastSeen={lastSeenLabel}
           onBack={() => navigation.goBack()}
           onMenuPress={() => {}}
         />
-
         <View style={styles.body}>{content}</View>
-
         <MessageInput
           value={text}
           onChangeText={setText}
           onSend={sendMessage}
           onEmojiPress={() => {}}
           onPickImage={() => {}}
-          onMicPress={() => {}}
         />
       </KeyboardAvoidingView>
     </AppContainer>
@@ -135,14 +117,8 @@ export default function MessageScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-
-  body: {
-    flex: 1,
-  },
-
+  container: { flex: 1 },
+  body: { flex: 1 },
   list: {
     paddingHorizontal: 16,
     paddingVertical: 10,

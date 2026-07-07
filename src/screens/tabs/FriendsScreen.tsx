@@ -6,23 +6,32 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  RefreshControl, // ✅ add
+  RefreshControl,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import AppContainer from "../../components/common/AppContainer";
 import SearchBar from "../../components/common/SearchBar";
 import FriendListItem from "../../components/common/FriendListItem";
 import { useAppSelector } from "../../redux/store/hooks";
 import { useUserProfiles } from "../../hooks/queries/useUserProfiles";
 import { useFriendMutations } from "../../hooks/queries/useFriendMutations";
+import { RootStackParamList } from "../../navigation/types"; // ✅ add
 import { User } from "../../types/user";
 import Colors from "../../constants/Colors";
 
 type Tab = "requests" | "friends";
 
+// ✅ typed navigation for this screen
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 export default function FriendsScreen() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<Tab>("requests");
-  const [refreshing, setRefreshing] = useState(false); // ✅ add
+  const [refreshing, setRefreshing] = useState(false);
+
+  const navigation = useNavigation<NavigationProp>(); // ✅ add
+  const currentUid = useAppSelector((state) => state.auth.user?.uid); // ✅ add
 
   const friendIds = useAppSelector((state) => state.friends.friends);
   const receivedIds = useAppSelector((state) => state.friends.receivedRequests);
@@ -30,13 +39,13 @@ export default function FriendsScreen() {
   const {
     data: friends = [],
     isLoading: loadingFriends,
-    refetch: refetchFriends, // ✅ add
+    refetch: refetchFriends,
   } = useUserProfiles(friendIds);
 
   const {
     data: requests = [],
     isLoading: loadingRequests,
-    refetch: refetchRequests, // ✅ add
+    refetch: refetchRequests,
   } = useUserProfiles(receivedIds);
 
   const { acceptRequest, rejectRequest, removeFriend } = useFriendMutations();
@@ -58,7 +67,6 @@ export default function FriendsScreen() {
 
   const loading = tab === "requests" ? loadingRequests : loadingFriends;
 
-  // ✅ Pull-to-refresh: refetches both lists regardless of active tab
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -67,6 +75,21 @@ export default function FriendsScreen() {
       setRefreshing(false);
     }
   }, [refetchFriends, refetchRequests]);
+
+  // ✅ builds a stable chatId regardless of who taps first
+  const buildChatId = (uidA: string, uidB: string) =>
+    [uidA, uidB].sort().join("_");
+
+  // ✅ this was missing — actually navigates to MessageScreen
+  const handleOpenChat = (user: User) => {
+    if (!currentUid) return;
+    navigation.navigate("ChatDetail", {
+      chatId: buildChatId(currentUid, user.uid),
+      otherUserId: user.uid,
+      otherUserName: user.fullName || "Unknown User",
+      otherUserAvatar: user.avatar,
+    });
+  };
 
   return (
     <AppContainer>
@@ -120,6 +143,7 @@ export default function FriendsScreen() {
               onAccept={(uid) => acceptRequest.mutate(uid)}
               onReject={(uid) => rejectRequest.mutate(uid)}
               onRemove={(uid) => removeFriend.mutate(uid)}
+              onPress={handleOpenChat} // ✅ this line was missing before
             />
           )}
           refreshControl={

@@ -7,12 +7,9 @@ import Colors from "../../constants/Colors";
 interface MessageInputProps {
   value: string;
   onChangeText: (text: string) => void;
-
   onSend: () => void;
   onPickImage?: () => void;
   onEmojiPress?: () => void;
-  onMicPress?: () => void;
-
   placeholder?: string;
   editable?: boolean;
 }
@@ -23,7 +20,6 @@ function MessageInput({
   onSend,
   onPickImage,
   onEmojiPress,
-  onMicPress,
   placeholder = "Type a message...",
   editable = true,
 }: MessageInputProps) {
@@ -31,18 +27,17 @@ function MessageInput({
 
   return (
     <View style={styles.container}>
-      {/* Input Box */}
       <View style={styles.inputContainer}>
         {/* Emoji */}
-        <TouchableOpacity activeOpacity={0.7} onPress={onEmojiPress}>
+        <TouchableOpacity onPress={onEmojiPress}>
           <Ionicons
             name="happy-outline"
             size={24}
-            color={Colors.textSecondary ?? "#777"}
+            color={Colors.textSecondary}
           />
         </TouchableOpacity>
 
-        {/* Text Input */}
+        {/* Input */}
         <TextInput
           style={styles.input}
           value={value}
@@ -50,28 +45,27 @@ function MessageInput({
           placeholder={placeholder}
           placeholderTextColor="#999"
           multiline
-          maxLength={1000}
           editable={editable}
-          textAlignVertical="top"
+          maxLength={1000}
         />
 
-        {/* Attachment */}
-        <TouchableOpacity activeOpacity={0.7} onPress={onPickImage}>
+        {/* Image */}
+        <TouchableOpacity onPress={onPickImage}>
           <Ionicons
-            name="attach"
+            name="image-outline"
             size={24}
-            color={Colors.textSecondary ?? "#777"}
+            color={Colors.textSecondary}
           />
         </TouchableOpacity>
       </View>
 
-      {/* Send / Mic */}
+      {/* Send */}
       <TouchableOpacity
-        style={styles.actionButton}
-        activeOpacity={0.8}
-        onPress={hasText ? onSend : onMicPress}
+        style={[styles.sendButton, !hasText && styles.sendButtonDisabled]}
+        disabled={!hasText}
+        onPress={onSend}
       >
-        <Ionicons name={hasText ? "send" : "mic"} size={22} color="#FFF" />
+        <Ionicons name="send" size={20} color="#FFF" />
       </TouchableOpacity>
     </View>
   );
@@ -83,8 +77,8 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "flex-end",
-    paddingVertical: 8,
     paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: Colors.background,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "#E5E5E5",
@@ -92,14 +86,13 @@ const styles = StyleSheet.create({
 
   inputContainer: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
     minHeight: 52,
     maxHeight: 120,
     backgroundColor: "#F5F6F8",
     borderRadius: 28,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    flexDirection: "row",
-    alignItems: "flex-end",
   },
 
   input: {
@@ -108,16 +101,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.text,
     maxHeight: 100,
-    paddingVertical: 4,
+    paddingVertical: 8,
   },
 
-  actionButton: {
+  sendButton: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    marginLeft: 10,
     justifyContent: "center",
     alignItems: "center",
+    marginLeft: 10,
     backgroundColor: Colors.primary,
+  },
+
+  sendButtonDisabled: {
+    opacity: 0.5,
   },
 });

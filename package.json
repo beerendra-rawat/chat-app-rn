@@ -23,7 +23,8 @@
     "react-native-reanimated": "4.5.0",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
-    "react-redux": "^9.3.0"
+    "react-redux": "^9.3.0",
+    "rn-emoji-keyboard": "^1.7.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",

@@ -1,5 +1,5 @@
 import React, { memo } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import Colors from "../../constants/Colors";
 import MessageStatus from "./MessageStatus";
@@ -18,12 +18,10 @@ interface MessageBubbleProps {
 }
 
 const formatTime = (timestamp: number) => {
-  const date = new Date(timestamp);
-
-  return date.toLocaleTimeString([], {
-    hour: "2-digit",
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
     minute: "2-digit",
-  });
+  }).format(new Date(timestamp));
 };
 
 function MessageBubble({ message, isMyMessage }: MessageBubbleProps) {
@@ -34,20 +32,28 @@ function MessageBubble({ message, isMyMessage }: MessageBubbleProps) {
         isMyMessage ? styles.myContainer : styles.otherContainer,
       ]}
     >
-      <View
-        style={[
+      <Pressable
+        android_ripple={{ color: "#E5E7EB" }}
+        style={({ pressed }) => [
           styles.bubble,
           isMyMessage ? styles.myBubble : styles.otherBubble,
+          pressed && styles.pressed,
         ]}
       >
         <Text style={styles.messageText}>{message.text}</Text>
 
         <View style={styles.footer}>
-          <Text style={styles.time}>{formatTime(message.createdAt)}</Text>
+          <Text style={styles.time}>
+            {formatTime(message.createdAt).toLowerCase()}
+          </Text>
 
-          {isMyMessage && <MessageStatus isRead={message.isRead} size={16} />}
+          {isMyMessage && (
+            <View style={styles.status}>
+              <MessageStatus isRead={message.isRead} size={15} />
+            </View>
+          )}
         </View>
-      </View>
+      </Pressable>
     </View>
   );
 }
@@ -57,7 +63,8 @@ export default memo(MessageBubble);
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    marginVertical: 4,
+    marginVertical: 3,
+    paddingHorizontal: 12,
   },
 
   myContainer: {
@@ -69,38 +76,69 @@ const styles = StyleSheet.create({
   },
 
   bubble: {
-    maxWidth: "80%",
+    maxWidth: "76%",
+    minWidth: 80,
+
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 18,
+
+    borderRadius: 22,
+
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+
+    elevation: 2,
   },
 
   myBubble: {
-    backgroundColor: Colors.primary,
+    backgroundColor: "#DCF8C6",
+
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderBottomLeftRadius: 22,
     borderBottomRightRadius: 6,
   },
 
   otherBubble: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#FFFFFF",
+
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
     borderBottomLeftRadius: 6,
+    borderBottomRightRadius: 22,
   },
 
   messageText: {
     fontSize: 16,
-    lineHeight: 22,
-    color: Colors.text,
+    lineHeight: 23,
+    color: "#1F2937",
+    fontWeight: "400",
   },
 
   footer: {
-    marginTop: 6,
     flexDirection: "row",
     justifyContent: "flex-end",
     alignItems: "center",
     alignSelf: "flex-end",
+    marginTop: 6,
   },
 
   time: {
     fontSize: 11,
-    color: "#777",
+    color: "#6B7280",
+  },
+
+  status: {
+    marginLeft: 4,
+  },
+
+  pressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
   },
 });

@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import UserAvatar from "./UserAvatar";
 import ActionButton from "./ActionButton";
 import { User } from "../../types/user";
@@ -24,12 +24,13 @@ export default function FriendListItem({
   onPress,
 }: Props) {
   return (
-    <View style={styles.container}>
-      <UserAvatar
-        image={user.avatar}
-        size={50}
-        onPress={() => onPress?.(user)}
-      />
+    // ✅ whole row is tappable
+    <TouchableOpacity
+      style={styles.container}
+      activeOpacity={0.7}
+      onPress={() => onPress?.(user)}
+    >
+      <UserAvatar image={user.avatar} size={50} />
 
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>
@@ -67,7 +68,7 @@ export default function FriendListItem({
           />
         )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

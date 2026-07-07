@@ -7,6 +7,7 @@ import RootNavigator from "./src/navigation/RootNavigator";
 import { store } from "./src/redux/store/store";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { useFriendsSync } from "./src/hooks/useFriendsSync"; // ✅ new
+import { usePresenceHeartbeat } from "./src/hooks/usePresence";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +21,7 @@ const queryClient = new QueryClient({
 // ✅ Must live inside <Provider> to use Redux hooks
 function AppInner() {
   useFriendsSync(); // ✅ keeps friends/sentRequests/receivedRequests live app-wide
+  usePresenceHeartbeat()
 
   return (
     <SafeAreaProvider>

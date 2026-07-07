@@ -1,7 +1,6 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAppSelector } from "../redux/store/hooks";
 import TabNavigator from "./TabNavigator";
-// Auth Screens
 import LoginScreen from "../screens/auth/LoginScreen";
 import SignupScreen from "../screens/auth/SignupScreen";
 import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
@@ -11,8 +10,10 @@ import UpdatePasswordScreen from "../screens/auth/UpdatePasswordScreen";
 import SuccessScreen from "../screens/auth/SuccessScreen";
 import AccountCreateMessageScreen from "../screens/auth/AccountCreateMessageScreen";
 import ViewImageScreen from "../screens/common/ViewImageScreen";
+import MessageScreen from "../screens/common/MessageScreen"; // ✅ confirm this path matches your Explorer (screens/common)
+import { RootStackParamList } from "./types"; // ✅ add
 
-const RootStack = createNativeStackNavigator();
+const RootStack = createNativeStackNavigator<RootStackParamList>(); // ✅ typed generic
 
 export default function RootNavigator() {
   const { user, loading } = useAppSelector((state) => state.auth);
@@ -29,8 +30,6 @@ export default function RootNavigator() {
         animation: "fade_from_bottom",
       }}
     >
-      {/* Screens that must ALWAYS be reachable, regardless of auth state,
-          because navigation to them can race with the user/auth state changing. */}
       <RootStack.Screen
         name="ViewImage"
         component={ViewImageScreen}
@@ -42,11 +41,14 @@ export default function RootNavigator() {
       />
 
       {user ? (
-        <RootStack.Screen
-          name="MainTabs"
-          component={TabNavigator}
-          options={{ gestureEnabled: false }}
-        />
+        <>
+          <RootStack.Screen
+            name="MainTabs"
+            component={TabNavigator}
+            options={{ gestureEnabled: false }}
+          />
+          <RootStack.Screen name="ChatDetail" component={MessageScreen} />
+        </>
       ) : (
         <>
           <RootStack.Screen name="Login" component={LoginScreen} />
