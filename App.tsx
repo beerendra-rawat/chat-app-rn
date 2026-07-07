@@ -3,19 +3,32 @@ import { NavigationContainer } from "@react-navigation/native";
 import { Provider } from "react-redux";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
-
 import RootNavigator from "./src/navigation/RootNavigator";
-import { store } from "./src/redux/store/store"; // ← Fixed import path
+import { store } from "./src/redux/store/store";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import { useFriendsSync } from "./src/hooks/useFriendsSync"; // ✅ new
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 5 * 60 * 1000,
       retry: 2,
     },
   },
 });
+
+// ✅ Must live inside <Provider> to use Redux hooks
+function AppInner() {
+  useFriendsSync(); // ✅ keeps friends/sentRequests/receivedRequests live app-wide
+
+  return (
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <RootNavigator />
+      </NavigationContainer>
+    </SafeAreaProvider>
+  );
+}
 
 export default function App() {
   useEffect(() => {
@@ -30,11 +43,7 @@ export default function App() {
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider>
-          <NavigationContainer>
-            <RootNavigator />
-          </NavigationContainer>
-        </SafeAreaProvider>
+        <AppInner />
       </QueryClientProvider>
     </Provider>
   );

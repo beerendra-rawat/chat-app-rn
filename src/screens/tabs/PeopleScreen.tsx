@@ -9,12 +9,12 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useSelector } from "react-redux";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
+import { useQuery } from "@tanstack/react-query";
 import AppContainer from "../../components/common/AppContainer";
 import SearchBar from "../../components/common/SearchBar";
 import UserListItem from "../../components/common/UserListItem";
 import { userService } from "../../services/user.service";
+import { useFriendMutations } from "../../hooks/queries/useFriendMutations"; // ✅ new
 import { RootState } from "../../redux/store/store";
 import Colors from "../../constants/Colors";
 
@@ -25,7 +25,17 @@ export default function PeopleScreen() {
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const currentUserUid = currentUser?.uid;
 
-  const queryClient = useQueryClient();
+  // ✅ Real friend state from Redux (kept live by useFriendsSync in App.tsx)
+  const friends = useSelector((state: RootState) => state.friends.friends);
+  const sentRequests = useSelector(
+    (state: RootState) => state.friends.sentRequests,
+  );
+  const receivedRequests = useSelector(
+    (state: RootState) => state.friends.receivedRequests,
+  );
+
+  // ✅ Real mutations instead of console.log placeholders
+  const { sendRequest, cancelRequest } = useFriendMutations();
 
   const {
     data: users = [],
@@ -33,15 +43,14 @@ export default function PeopleScreen() {
     refetch,
     error,
   } = useQuery({
-    queryKey: ["allUsers", search],
+    queryKey: ["allUsers"], // ✅ removed `search` from key — filtering is local, not a new query
     queryFn: () => userService.getAllUsers(currentUserUid!),
     enabled: !!currentUserUid,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 
   const filteredUsers = useMemo(() => {
     if (!search.trim()) return users;
-
     const term = search.toLowerCase().trim();
     return users.filter(
       (user: any) =>
@@ -50,26 +59,29 @@ export default function PeopleScreen() {
     );
   }, [users, search]);
 
+  // ✅ Derive real friendship status per user from Redux arrays
+  const getFriendshipStatus = (
+    uid: string,
+  ): "none" | "friends" | "sent" | "pending" => {
+    if (friends.includes(uid)) return "friends";
+    if (sentRequests.includes(uid)) return "sent";
+    if (receivedRequests.includes(uid)) return "pending";
+    return "none";
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await refetch();
     setRefreshing(false);
   };
 
-  const sendFriendRequest = async (targetUid: string) => {
-    // TODO: Implement properly
-    console.log("Send friend request to:", targetUid);
-    // Invalidate query to refresh UI
-    queryClient.invalidateQueries({ queryKey: ["allUsers"] });
-  };
-
   const renderItem = ({ item }: { item: any }) => (
     <UserListItem
       user={item}
       currentUserUid={currentUserUid!}
-      friendshipStatus="none" // TODO: implement real status
-      onAddFriend={sendFriendRequest}
-      onCancelRequest={(uid) => console.log("Cancel request to", uid)}
+      friendshipStatus={getFriendshipStatus(item.uid)}
+      onAddFriend={(uid) => sendRequest.mutateAsync(uid)} // ✅ mutateAsync, not mutate
+      onCancelRequest={(uid) => cancelRequest.mutateAsync(uid)} // ✅ mutateAsync, not mutate
     />
   );
 
@@ -90,7 +102,6 @@ export default function PeopleScreen() {
         onChangeText={setSearch}
         placeholder="Search people..."
       />
-
       <FlatList
         data={filteredUsers}
         keyExtractor={(item) => item.uid}
