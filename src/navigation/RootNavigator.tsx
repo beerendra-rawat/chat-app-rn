@@ -1,7 +1,6 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAppSelector } from "../redux/store/hooks";
 import TabNavigator from "./TabNavigator";
-
 // Auth Screens
 import LoginScreen from "../screens/auth/LoginScreen";
 import SignupScreen from "../screens/auth/SignupScreen";
@@ -30,10 +29,16 @@ export default function RootNavigator() {
         animation: "fade_from_bottom",
       }}
     >
+      {/* Screens that must ALWAYS be reachable, regardless of auth state,
+          because navigation to them can race with the user/auth state changing. */}
       <RootStack.Screen
         name="ViewImage"
         component={ViewImageScreen}
         options={{ headerShown: false, presentation: "fullScreenModal" }}
+      />
+      <RootStack.Screen
+        name="AccountCreatedSuccess"
+        component={AccountCreateMessageScreen}
       />
 
       {user ? (
@@ -60,10 +65,6 @@ export default function RootNavigator() {
             component={UpdatePasswordScreen}
           />
           <RootStack.Screen name="Success" component={SuccessScreen} />
-          <RootStack.Screen
-            name="AccountCreatedSuccess"
-            component={AccountCreateMessageScreen}
-          />
         </>
       )}
     </RootStack.Navigator>

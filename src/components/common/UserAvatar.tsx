@@ -33,7 +33,7 @@ export default function UserAvatar({
       >
         {image ? (
           <Image
-            source={{ uri: image }}
+            source={{ uri: image || undefined }}
             style={{
               width: size,
               height: size,
