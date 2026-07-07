@@ -14,6 +14,7 @@ import {
 
 import { auth } from "../config/firebase";
 import { registerUser } from "../services/auth.service";
+import { userService } from "../services/user.service";
 
 import { useAppDispatch } from "../redux/store/hooks";
 import {
@@ -24,17 +25,23 @@ import {
 } from "../redux/slice/authSlice";
 
 export const useAuth = () => {
-  const dispatch = useAppDispatch();
+  const dispatch = useAppDispatch(); // ✅ must come before it's used below
 
-  //Firebase Authentication Listener
+  // Firebase Authentication Listener
   useEffect(() => {
     console.log("🔥 Auth Listener Started");
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         console.log("✅ User Session Restored");
         console.log("👤 UID:", user.uid);
         console.log("📧 Email:", user.email);
+
+        try {
+          await userService.ensureUserDocument(user); // ✅ backfill/create Firestore doc
+        } catch (err) {
+          console.error("⚠️ Failed to sync user document:", err);
+        }
       } else {
         console.log("🚪 No authenticated user found");
       }
