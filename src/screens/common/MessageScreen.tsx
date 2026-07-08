@@ -1,23 +1,31 @@
-import React, { useMemo, useEffect, useState } from "react";
+import React, { useMemo, useEffect, useState, useCallback } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  Text,
   View,
 } from "react-native";
-import { useIsFocused } from "@react-navigation/native"; // ✅ add
+import { useIsFocused } from "@react-navigation/native";
 import AppContainer from "../../components/common/AppContainer";
 import EmptyChat from "../../components/chat/EmptyChat";
 import MessageHeader from "../../components/chat/MessageHeader";
 import MessageInput from "../../components/chat/MessageInput";
 import MessageBubble from "../../components/chat/MessageBubble";
+import EmojiPicker from "../../components/chat/EmojiPicker";
 import { RootStackScreenProps } from "../../navigation/types";
 import { Message } from "../../types/chat";
 import { chatService } from "../../services/chat.service";
 import { useChatMessages } from "../../hooks/useChatMessages";
 import { useAppSelector } from "../../redux/store/hooks";
 import { usePresence } from "../../hooks/usePresence";
+import { pickImageFromLibrary } from "../../utils/imagePicker";
+import { uploadToCloudinary } from "../../utils/uploadToCloudinary";
+import Colors from "../../constants/Colors";
 
 type Props = RootStackScreenProps<"ChatDetail">;
 
@@ -28,8 +36,10 @@ export default function MessageScreen({ navigation, route }: Props) {
   const { messages, loading } = useChatMessages(chatId);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const { isOnline, lastSeenLabel } = usePresence(otherUserId);
-  const isFocused = useIsFocused(); // ✅ add — only mark read while this screen is actually visible
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     if (!currentUid || !otherUserId) return;
@@ -38,8 +48,6 @@ export default function MessageScreen({ navigation, route }: Props) {
       .catch((err) => console.error("Failed to ensure chat document:", err));
   }, [chatId, currentUid, otherUserId]);
 
-  // ✅ new — mark incoming messages as read whenever the message list updates
-  // AND the screen is focused (don't mark read from a push notification preview, etc.)
   useEffect(() => {
     if (!currentUid || !isFocused || !messages.length) return;
 
@@ -67,6 +75,43 @@ export default function MessageScreen({ navigation, route }: Props) {
       setSending(false);
     }
   };
+
+  const handlePickImage = useCallback(async () => {
+    if (!currentUid || uploadingImage) return;
+    try {
+      const uri = await pickImageFromLibrary();
+      if (!uri) return;
+
+      setUploadingImage(true);
+      const imageUrl = await uploadToCloudinary(uri);
+      await chatService.sendImageMessage(chatId, currentUid, imageUrl);
+    } catch (err) {
+      if (err instanceof Error && err.message === "PERMISSION_DENIED") {
+        Alert.alert(
+          "Permission needed",
+          "Allow photo library access to share images.",
+        );
+      } else {
+        console.error("Failed to send image:", err);
+        Alert.alert("Upload failed", "Could not send the image. Try again.");
+      }
+    } finally {
+      setUploadingImage(false);
+    }
+  }, [chatId, currentUid, uploadingImage]);
+
+  const handleEmojiSelect = useCallback((emoji: string) => {
+    setText((prev) => prev + emoji);
+  }, []);
+
+  const toggleEmojiPicker = useCallback(() => {
+    Keyboard.dismiss();
+    setShowEmojiPicker((prev) => !prev);
+  }, []);
+
+  const handleInputFocus = useCallback(() => {
+    if (showEmojiPicker) setShowEmojiPicker(false);
+  }, [showEmojiPicker]);
 
   const renderItem = ({ item }: { item: Message }) => (
     <MessageBubble message={item} isMyMessage={item.senderId === currentUid} />
@@ -103,14 +148,27 @@ export default function MessageScreen({ navigation, route }: Props) {
           onBack={() => navigation.goBack()}
           onMenuPress={() => {}}
         />
+
         <View style={styles.body}>{content}</View>
+
+        {uploadingImage && (
+          <View style={styles.uploadingBar}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+            <Text style={styles.uploadingText}>Sending image...</Text>
+          </View>
+        )}
+
         <MessageInput
           value={text}
           onChangeText={setText}
           onSend={sendMessage}
-          onEmojiPress={() => {}}
-          onPickImage={() => {}}
+          onEmojiPress={toggleEmojiPicker}
+          onPickImage={handlePickImage}
+          onFocus={handleInputFocus}
+          editable={!uploadingImage}
         />
+
+        {showEmojiPicker && <EmojiPicker onSelect={handleEmojiSelect} />}
       </KeyboardAvoidingView>
     </AppContainer>
   );
@@ -125,4 +183,12 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "flex-end",
   },
+  uploadingBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 6,
+    backgroundColor: "#F5F6F8",
+  },
+  uploadingText: { marginLeft: 8, fontSize: 13, color: Colors.textSecondary },
 });

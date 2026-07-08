@@ -26,6 +26,11 @@ const Colors = {
   chatBubbleMe: "#007AFF",
   chatBubbleOther: "#E5E5EA",
 
+  // ✅ new — used for text/icons rendered on top of images (e.g. timestamp + read ticks on photo bubbles)
+  onImage: "#FFFFFF",
+  onImageMuted: "rgba(255, 255, 255, 0.75)",
+  onImageOverlay: "rgba(0, 0, 0, 0.35)",
+
   // Extras (good to have)
   overlay: "rgba(0, 0, 0, 0.5)",
   disabled: "#C7C7CC",

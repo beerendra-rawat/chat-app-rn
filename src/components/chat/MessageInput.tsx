@@ -1,7 +1,6 @@
 import React, { memo } from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-
 import Colors from "../../constants/Colors";
 
 interface MessageInputProps {
@@ -10,6 +9,7 @@ interface MessageInputProps {
   onSend: () => void;
   onPickImage?: () => void;
   onEmojiPress?: () => void;
+  onFocus?: () => void;
   placeholder?: string;
   editable?: boolean;
 }
@@ -20,6 +20,7 @@ function MessageInput({
   onSend,
   onPickImage,
   onEmojiPress,
+  onFocus,
   placeholder = "Type a message...",
   editable = true,
 }: MessageInputProps) {
@@ -28,7 +29,6 @@ function MessageInput({
   return (
     <View style={styles.container}>
       <View style={styles.inputContainer}>
-        {/* Emoji */}
         <TouchableOpacity onPress={onEmojiPress}>
           <Ionicons
             name="happy-outline"
@@ -37,11 +37,11 @@ function MessageInput({
           />
         </TouchableOpacity>
 
-        {/* Input */}
         <TextInput
           style={styles.input}
           value={value}
           onChangeText={onChangeText}
+          onFocus={onFocus}
           placeholder={placeholder}
           placeholderTextColor="#999"
           multiline
@@ -49,8 +49,7 @@ function MessageInput({
           maxLength={1000}
         />
 
-        {/* Image */}
-        <TouchableOpacity onPress={onPickImage}>
+        <TouchableOpacity onPress={onPickImage} disabled={!editable}>
           <Ionicons
             name="image-outline"
             size={24}
@@ -59,7 +58,6 @@ function MessageInput({
         </TouchableOpacity>
       </View>
 
-      {/* Send */}
       <TouchableOpacity
         style={[styles.sendButton, !hasText && styles.sendButtonDisabled]}
         disabled={!hasText}
@@ -83,7 +81,6 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "#E5E5E5",
   },
-
   inputContainer: {
     flex: 1,
     flexDirection: "row",
@@ -94,7 +91,6 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     paddingHorizontal: 14,
   },
-
   input: {
     flex: 1,
     marginHorizontal: 10,
@@ -103,7 +99,6 @@ const styles = StyleSheet.create({
     maxHeight: 100,
     paddingVertical: 8,
   },
-
   sendButton: {
     width: 52,
     height: 52,
@@ -113,8 +108,5 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     backgroundColor: Colors.primary,
   },
-
-  sendButtonDisabled: {
-    opacity: 0.5,
-  },
+  sendButtonDisabled: { opacity: 0.5 },
 });

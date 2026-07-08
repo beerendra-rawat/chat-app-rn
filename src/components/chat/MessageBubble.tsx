@@ -1,12 +1,15 @@
 import React, { memo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import Colors from "../../constants/Colors";
 import MessageStatus from "./MessageStatus";
+import { Message, MessageType } from "../../types/chat"; // ✅ updated — use shared Message type instead of local ChatMessage
 
 export interface ChatMessage {
   id: string;
   text: string;
+  imageUrl?: string; // ✅ new
+  type?: MessageType; // ✅ new
   senderId: string;
   createdAt: number;
   isRead: boolean;
@@ -25,6 +28,9 @@ const formatTime = (timestamp: number) => {
 };
 
 function MessageBubble({ message, isMyMessage }: MessageBubbleProps) {
+  const navigation = useNavigation<any>(); // ✅ new
+  const isImage = message.type === "image" && !!message.imageUrl; // ✅ new
+
   return (
     <View
       style={[
@@ -34,25 +40,54 @@ function MessageBubble({ message, isMyMessage }: MessageBubbleProps) {
     >
       <Pressable
         android_ripple={{ color: "#E5E7EB" }}
+        onPress={
+          isImage
+            ? () =>
+                navigation.navigate("ViewImage", {
+                  imageUri: message.imageUrl,
+                })
+            : undefined
+        }
         style={({ pressed }) => [
           styles.bubble,
           isMyMessage ? styles.myBubble : styles.otherBubble,
+          isImage && styles.imageBubble, // ✅ new
           pressed && styles.pressed,
         ]}
       >
-        <Text style={styles.messageText}>{message.text}</Text>
-
-        <View style={styles.footer}>
-          <Text style={styles.time}>
-            {formatTime(message.createdAt).toLowerCase()}
-          </Text>
-
-          {isMyMessage && (
-            <View style={styles.status}>
-              <MessageStatus isRead={message.isRead} size={15} />
+        {isImage ? (
+          <>
+            <Image
+              source={{ uri: message.imageUrl }}
+              style={styles.image}
+              resizeMode="cover"
+            />
+            <View style={styles.imageFooter}>
+              <Text style={styles.timeOnImage}>
+                {formatTime(message.createdAt).toLowerCase()}
+              </Text>
+              {isMyMessage && (
+                <View style={styles.status}>
+                  <MessageStatus isRead={message.isRead} size={15} />
+                </View>
+              )}
             </View>
-          )}
-        </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.messageText}>{message.text}</Text>
+            <View style={styles.footer}>
+              <Text style={styles.time}>
+                {formatTime(message.createdAt).toLowerCase()}
+              </Text>
+              {isMyMessage && (
+                <View style={styles.status}>
+                  <MessageStatus isRead={message.isRead} size={15} />
+                </View>
+              )}
+            </View>
+          </>
+        )}
       </Pressable>
     </View>
   );
@@ -66,24 +101,18 @@ const styles = StyleSheet.create({
     marginVertical: 3,
     paddingHorizontal: 12,
   },
-
   myContainer: {
     alignItems: "flex-end",
   },
-
   otherContainer: {
     alignItems: "flex-start",
   },
-
   bubble: {
     maxWidth: "76%",
     minWidth: 80,
-
     paddingHorizontal: 14,
     paddingVertical: 10,
-
     borderRadius: 22,
-
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -91,35 +120,54 @@ const styles = StyleSheet.create({
       width: 0,
       height: 2,
     },
-
     elevation: 2,
   },
-
   myBubble: {
     backgroundColor: "#DCF8C6",
-
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     borderBottomLeftRadius: 22,
     borderBottomRightRadius: 6,
   },
-
   otherBubble: {
     backgroundColor: "#FFFFFF",
-
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     borderBottomLeftRadius: 6,
     borderBottomRightRadius: 22,
   },
-
+  imageBubble: {
+    // ✅ new — image bubbles get tighter padding, image fills it
+    padding: 4,
+    minWidth: undefined,
+  },
+  image: {
+    // ✅ new
+    width: 220,
+    height: 220,
+    borderRadius: 18,
+  },
+  imageFooter: {
+    position: "absolute",
+    bottom: 8,
+    right: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.onImageOverlay, // was "rgba(0,0,0,0.35)"
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  timeOnImage: {
+    fontSize: 11,
+    color: Colors.onImage, // was "#FFFFFF"
+  },
   messageText: {
     fontSize: 16,
     lineHeight: 23,
     color: "#1F2937",
     fontWeight: "400",
   },
-
   footer: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -127,16 +175,13 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
     marginTop: 6,
   },
-
   time: {
     fontSize: 11,
     color: "#6B7280",
   },
-
   status: {
     marginLeft: 4,
   },
-
   pressed: {
     opacity: 0.85,
     transform: [{ scale: 0.98 }],

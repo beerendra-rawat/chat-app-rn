@@ -12,7 +12,7 @@ import {
   Timestamp,
   getDoc,
   getDocs,
-  writeBatch, // ✅ add
+  writeBatch,
 } from "firebase/firestore";
 import { Message, FirestoreMessage } from "../types/chat";
 
@@ -37,13 +37,14 @@ export const chatService = {
   subscribeToMessages(chatId: string, callback: (messages: Message[]) => void) {
     const messagesRef = collection(db, "chats", chatId, "messages");
     const q = query(messagesRef, orderBy("clientCreatedAt", "desc"));
-
     return onSnapshot(q, (snapshot) => {
       const messages: Message[] = snapshot.docs.map((docSnap) => {
         const data = docSnap.data() as FirestoreMessage;
         return {
           id: docSnap.id,
-          text: data.text,
+          text: data.text ?? "",
+          imageUrl: data.imageUrl,
+          type: data.type ?? "text",
           senderId: data.senderId,
           createdAt: data.createdAt
             ? (data.createdAt as Timestamp).toMillis()
@@ -57,9 +58,9 @@ export const chatService = {
 
   async sendMessage(chatId: string, senderId: string, text: string) {
     const messagesRef = collection(db, "chats", chatId, "messages");
-
     await addDoc(messagesRef, {
       text,
+      type: "text",
       senderId,
       createdAt: serverTimestamp(),
       clientCreatedAt: Date.now(),
@@ -77,21 +78,39 @@ export const chatService = {
     );
   },
 
-  // ✅ new — marks every unread message FROM the other person as read
+  // ✅ new — image messages
+  async sendImageMessage(chatId: string, senderId: string, imageUrl: string) {
+    const messagesRef = collection(db, "chats", chatId, "messages");
+    await addDoc(messagesRef, {
+      text: "",
+      imageUrl,
+      type: "image",
+      senderId,
+      createdAt: serverTimestamp(),
+      clientCreatedAt: Date.now(),
+      isRead: false,
+    });
+
+    await setDoc(
+      doc(db, "chats", chatId),
+      {
+        lastMessage: "📷 Photo",
+        lastMessageAt: serverTimestamp(),
+        lastMessageSenderId: senderId,
+      },
+      { merge: true },
+    );
+  },
+
   async markMessagesAsRead(chatId: string, currentUid: string) {
     const messagesRef = collection(db, "chats", chatId, "messages");
-
-    // ✅ single-field filter only — no composite index required
     const q = query(messagesRef, where("isRead", "==", false));
-
     const snapshot = await getDocs(q);
     if (snapshot.empty) return;
 
-    // ✅ exclude your own messages client-side instead of in the query
     const unreadFromOthers = snapshot.docs.filter(
       (docSnap) => docSnap.data().senderId !== currentUid,
     );
-
     if (!unreadFromOthers.length) return;
 
     const batch = writeBatch(db);
