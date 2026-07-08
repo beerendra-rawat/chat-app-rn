@@ -11,7 +11,7 @@ interface StoryAvatarProps {
   hasUnseen?: boolean;
   isOwn?: boolean;
   onPress: () => void;
-  onAddPress?: () => void; // fires only when isOwn && !hasStory
+  onAddPress?: () => void; // ✅ now fires from a separate always-visible badge when isOwn
 }
 
 export default function StoryAvatar({
@@ -24,37 +24,46 @@ export default function StoryAvatar({
   onAddPress,
 }: StoryAvatarProps) {
   const ringSize = size + 8;
-  const showAddBadge = isOwn && !hasStory;
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={showAddBadge ? onAddPress : onPress}
-    >
-      <View
-        style={[
-          styles.ring,
-          {
-            width: ringSize,
-            height: ringSize,
-            borderRadius: ringSize / 2,
-            borderColor: hasStory
-              ? hasUnseen
-                ? Colors.primary
-                : Colors.border
-              : "transparent",
-          },
-        ]}
+    <View>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        // ✅ fixed — own avatar opens the viewer whenever a story exists;
+        // adding is now a separate badge below, not tied to hasStory
+        onPress={hasStory ? onPress : onAddPress}
       >
-        <UserAvatar image={image} size={size} />
-      </View>
-
-      {showAddBadge && (
-        <View style={styles.addBadge}>
-          <Ionicons name="add" size={14} color="#FFF" />
+        <View
+          style={[
+            styles.ring,
+            {
+              width: ringSize,
+              height: ringSize,
+              borderRadius: ringSize / 2,
+              borderColor: hasStory
+                ? hasUnseen
+                  ? Colors.primary
+                  : Colors.border
+                : "transparent",
+            },
+          ]}
+        >
+          <UserAvatar image={image} size={size} />
         </View>
+      </TouchableOpacity>
+
+      {isOwn && (
+        // ✅ fixed — always rendered for own avatar (not just when hasStory is false),
+        // so the + button stays visible even after you've posted stories
+        <TouchableOpacity
+          style={styles.addBadge}
+          activeOpacity={0.8}
+          onPress={onAddPress}
+        >
+          <Ionicons name="add" size={14} color="#FFF" />
+        </TouchableOpacity>
       )}
-    </TouchableOpacity>
+    </View>
   );
 }
 

@@ -1,21 +1,24 @@
-import React, { useCallback, useMemo, useState } from "react"; // ✅ added useMemo
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
 import AppContainer from "../../components/common/AppContainer";
 import StoryBar from "../../components/chat/StoryBar";
 import RecentChatItem from "../../components/chat/RecentChatItem";
+import UploadProgressOverlay from "../../components/chat/UploadProgressOverlay";
 import { useAppSelector } from "../../redux/store/hooks";
 import { useStories } from "../../hooks/useStories";
 import { useRecentChats } from "../../hooks/useRecentChats";
 import { useUserProfiles } from "../../hooks/queries/useUserProfiles";
 import { storyService } from "../../services/story.service";
-import { pickImageFromLibrary } from "../../utils/imagePicker";
+import { pickImageFromLibrary } from "../../utils/imagePicker"; // ✅ back to single-image
 import { uploadToCloudinary } from "../../utils/uploadToCloudinary";
 import Colors from "../../constants/Colors";
 
 export default function ChatScreen({ navigation }: any) {
   const currentUser = useAppSelector((state) => state.auth.user);
   const friends = useAppSelector((state) => state.friends.friends);
-  const friendIds = (friends ?? []).map((f: any) => f.uid);
+  const friendIds = (friends ?? [])
+    .map((f: any) => f.uid)
+    .filter((id: string | undefined): id is string => !!id);
 
   const { storyGroups } = useStories(currentUser?.uid, friendIds);
   const {
@@ -23,16 +26,14 @@ export default function ChatScreen({ navigation }: any) {
     otherUserIds,
     loading: chatsLoading,
   } = useRecentChats(currentUser?.uid);
+  const { data: userProfiles } = useUserProfiles(otherUserIds);
 
-  const { data: userProfiles } = useUserProfiles(otherUserIds); // ✅ raw array from React Query
-
-  // ✅ new — build a lookup map { uid: { name, avatar } } from the array
   const profiles = useMemo(() => {
     const map: Record<string, { name: string; avatar?: string | null }> = {};
     (userProfiles ?? []).forEach((u: any) => {
       map[u.uid] = {
         name: u.displayName ?? u.name ?? "Unknown",
-        avatar: u.photoURL ?? u.avatar ?? null,
+        avatar: u.photoURL ?? u.avatar,
       };
     });
     return map;
@@ -40,13 +41,19 @@ export default function ChatScreen({ navigation }: any) {
 
   const [postingStory, setPostingStory] = useState(false);
 
+  // ✅ posts ONE story per call. Tap "add story" now, again in an hour, again tomorrow —
+  // each call creates a new Story doc with its own timestamp, and they all stack
+  // together under your avatar in the order they were posted.
   const handleAddStory = useCallback(async () => {
     if (!currentUser?.uid || postingStory) return;
     try {
       const uri = await pickImageFromLibrary();
       if (!uri) return;
+
       setPostingStory(true);
+
       const mediaUrl = await uploadToCloudinary(uri);
+
       await storyService.addStory(
         currentUser.uid,
         currentUser.displayName ?? "You",
@@ -54,7 +61,15 @@ export default function ChatScreen({ navigation }: any) {
         mediaUrl,
       );
     } catch (err) {
-      console.error("Failed to post story:", err);
+      if (err instanceof Error && err.message === "PERMISSION_DENIED") {
+        Alert.alert(
+          "Permission needed",
+          "Allow photo library access to post a story.",
+        );
+      } else {
+        console.error("Failed to post story:", err);
+        Alert.alert("Upload failed", "Could not post your story. Try again.");
+      }
     } finally {
       setPostingStory(false);
     }
@@ -74,7 +89,7 @@ export default function ChatScreen({ navigation }: any) {
 
   const handleOpenChat = useCallback(
     (chatId: string, otherUserId: string) => {
-      const profile = profiles[otherUserId]; // ✅ fixed — profiles is now defined via useMemo above
+      const profile = profiles[otherUserId];
       navigation.navigate("ChatDetail", {
         chatId,
         otherUserId,
@@ -105,7 +120,7 @@ export default function ChatScreen({ navigation }: any) {
         renderItem={({ item }) => {
           const otherUserId =
             item.participants.find((p: string) => p !== currentUser?.uid) ?? "";
-          const profile = profiles[otherUserId]; // ✅ fixed
+          const profile = profiles[otherUserId];
           return (
             <RecentChatItem
               name={profile?.name ?? "..."}
@@ -134,6 +149,8 @@ export default function ChatScreen({ navigation }: any) {
           ) : null
         }
       />
+
+      <UploadProgressOverlay visible={postingStory} label="Posting story..." />
     </AppContainer>
   );
 }

@@ -7,6 +7,7 @@ import {
   Alert,
   ActivityIndicator,
   Text,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,6 +17,8 @@ import { storyService } from "../../services/story.service";
 import { RootStackScreenProps } from "../../navigation/types";
 
 const STORY_DURATION_MS = 5000;
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const MEDIA_HEIGHT = SCREEN_HEIGHT * 0.75; // ✅ new — story media takes 75% of screen height
 
 type Props = RootStackScreenProps<"StoryViewer">;
 
@@ -125,31 +128,34 @@ export default function StoryViewerScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.container}>
-      <Image
-        source={{ uri: story.mediaUrl }}
-        style={styles.image}
-        resizeMode="cover"
-        onLoadEnd={() => setImageLoading(false)}
-      />
+      {/* ✅ new — media card sits in the middle 75% of the screen, not edge-to-edge */}
+      <View style={styles.mediaWrapper}>
+        <Image
+          source={{ uri: story.mediaUrl }}
+          style={styles.image}
+          resizeMode="contain" // ✅ fixed — was "cover", which cropped the sides
+          onLoadEnd={() => setImageLoading(false)}
+        />
 
-      {imageLoading && (
-        <View style={styles.loaderOverlay}>
-          <ActivityIndicator size="large" color="#FFF" />
-        </View>
-      )}
+        {imageLoading && (
+          <View style={styles.loaderOverlay}>
+            <ActivityIndicator size="large" color="#FFF" />
+          </View>
+        )}
 
-      <Pressable
-        style={styles.leftZone}
-        onPress={goToPrevStory}
-        onLongPress={() => setPaused(true)}
-        onPressOut={() => setPaused(false)}
-      />
-      <Pressable
-        style={styles.rightZone}
-        onPress={goToNextStory}
-        onLongPress={() => setPaused(true)}
-        onPressOut={() => setPaused(false)}
-      />
+        <Pressable
+          style={styles.leftZone}
+          onPress={goToPrevStory}
+          onLongPress={() => setPaused(true)}
+          onPressOut={() => setPaused(false)}
+        />
+        <Pressable
+          style={styles.rightZone}
+          onPress={goToNextStory}
+          onLongPress={() => setPaused(true)}
+          onPressOut={() => setPaused(false)}
+        />
+      </View>
 
       <SafeAreaView style={styles.overlay} edges={["top"]}>
         <StoryProgressBar
@@ -184,10 +190,28 @@ export default function StoryViewerScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
-  image: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: "#000",
+    justifyContent: "center", // ✅ new — centers the 75%-height media vertically
+  },
+  mediaWrapper: {
+    // ✅ new — replaces the old flex:1 image; now a fixed-height card
+    height: MEDIA_HEIGHT,
+    marginTop: 60, // ✅ top spacing, clears the header/progress bar area
+    marginBottom: 40, // ✅ bottom spacing
+    marginHorizontal: 0,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#111",
+  },
+  image: { width: "100%", height: "100%" },
   loaderOverlay: {
-    ...StyleSheet.absoluteFill,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: "center",
     alignItems: "center",
   },
