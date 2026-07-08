@@ -29,3 +29,11 @@ export interface Chat {
   lastMessageAt?: number;
   lastMessageSenderId?: string;
 }
+
+export interface ChatSummary {
+  id: string;
+  participants: string[];
+  lastMessage: string;
+  lastMessageAt: number;
+  lastMessageSenderId: string;
+}

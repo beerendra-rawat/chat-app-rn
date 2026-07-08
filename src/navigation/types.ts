@@ -1,5 +1,6 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import { UserStories } from "../types/story";
 
 // Bottom Tabs
 export type TabParamList = {
@@ -12,7 +13,7 @@ export type TabParamList = {
 
 // Root Stack
 export type RootStackParamList = {
-  MainTabs: undefined; // ✅ was "Tabs" — must match what's used in RootNavigator
+  MainTabs: undefined;
   Login: undefined;
   Signup: undefined;
   ForgotPassword: undefined;
@@ -20,7 +21,9 @@ export type RootStackParamList = {
   PasswordReset: undefined;
   UpdatePassword: undefined;
   Success: undefined;
-  ViewImage: { imageUri: string }; // ✅ adjust to your actual ViewImageScreen params
+  ViewImage: {
+    imageUri: string;
+  };
   AccountCreatedSuccess: undefined;
   ChatDetail: {
     chatId: string;
@@ -28,10 +31,16 @@ export type RootStackParamList = {
     otherUserName: string;
     otherUserAvatar?: string | null;
   };
+  StoryViewer: {
+    storyGroups: UserStories[];
+    initialUserId: string;
+    currentUid: string;
+  };
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> =
   NativeStackScreenProps<RootStackParamList, T>;
+
 export type TabScreenProps<T extends keyof TabParamList> = BottomTabScreenProps<
   TabParamList,
   T

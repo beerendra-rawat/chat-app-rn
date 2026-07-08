@@ -11,6 +11,7 @@ import SuccessScreen from "../screens/auth/SuccessScreen";
 import AccountCreateMessageScreen from "../screens/auth/AccountCreateMessageScreen";
 import ViewImageScreen from "../screens/common/ViewImageScreen";
 import MessageScreen from "../screens/common/MessageScreen"; // ✅ confirm this path matches your Explorer (screens/common)
+import StoryViewerScreen from "../screens/common/StoryViewerScreen"; // ✅ new
 import { RootStackParamList } from "./types"; // ✅ add
 
 const RootStack = createNativeStackNavigator<RootStackParamList>(); // ✅ typed generic
@@ -36,10 +37,14 @@ export default function RootNavigator() {
         options={{ headerShown: false, presentation: "fullScreenModal" }}
       />
       <RootStack.Screen
+        name="StoryViewer" // ✅ new — Instagram-style story viewer, full-screen modal like ViewImage
+        component={StoryViewerScreen}
+        options={{ headerShown: false, presentation: "fullScreenModal" }}
+      />
+      <RootStack.Screen
         name="AccountCreatedSuccess"
         component={AccountCreateMessageScreen}
       />
-
       {user ? (
         <>
           <RootStack.Screen
