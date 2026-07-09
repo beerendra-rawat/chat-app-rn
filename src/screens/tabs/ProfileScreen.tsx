@@ -12,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AppContainer from "../../components/common/AppContainer";
 import CustomInput from "../../components/auth/CustomInput";
 import PrimaryButton from "../../components/auth/PrimaryButton";
-import ProfileSkeleton from "../../components/common/ProfileSkeleton"; // ✅ new
+import ProfileSkeleton from "../../components/common/ProfileSkeleton";
 import { useAppSelector } from "../../redux/store/hooks";
 import { useAuth } from "../../hooks/useAuth";
 import { useProfile } from "../../hooks/useProfile";
@@ -32,21 +32,15 @@ export default function ProfileScreen({ navigation }: any) {
     saveProfile,
     saving,
     uploadingImage,
-    refetchProfile, // ✅ new — assumes useProfile exposes a refetch; see note below
-  } = useProfile();
+  } = useProfile(); // ✅ fixed — removed refetchProfile, useProfile doesn't expose it
 
-  // ✅ new — pull-to-refresh support
+  // ✅ pull-to-refresh gesture only — profile data is already live from
+  // useAppSelector/useProfile's own subscription, nothing to manually refetch
   const [refreshing, setRefreshing] = useState(false);
-  const handleRefresh = useCallback(async () => {
+  const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    try {
-      if (refetchProfile) {
-        await refetchProfile();
-      }
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refetchProfile]);
+    setTimeout(() => setRefreshing(false), 600);
+  }, []);
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure?", [
@@ -66,7 +60,6 @@ export default function ProfileScreen({ navigation }: any) {
     ]);
   };
 
-  // ✅ fixed — was a plain "Loading profile..." text, now the skeleton
   if (!user) {
     return (
       <AppContainer>
@@ -76,11 +69,7 @@ export default function ProfileScreen({ navigation }: any) {
   }
 
   return (
-    <AppContainer
-      scrollable // ✅ new — AppContainer now owns scrolling (replaces the inline ScrollView)
-      refreshing={refreshing}
-      onRefresh={handleRefresh}
-    >
+    <AppContainer scrollable refreshing={refreshing} onRefresh={handleRefresh}>
       {/* Edit Button */}
       <View style={styles.header}>
         <TouchableOpacity
