@@ -27,15 +27,15 @@ export default function ChatScreen({ navigation }: any) {
   const { data: userProfiles } = useUserProfiles(otherUserIds);
 
   const profiles = useMemo(() => {
-  const map: Record<string, { name: string; avatar?: string | null }> = {};
-  (userProfiles ?? []).forEach((u: any) => {
-    map[u.uid] = {
-      name: u.fullName || u.displayName || u.name || "Unknown", // ✅ fixed — fullName is the actual field
-      avatar: u.avatar ?? u.photoURL,
-    };
-  });
-  return map;
-}, [userProfiles]);
+    const map: Record<string, { name: string; avatar?: string | null }> = {};
+    (userProfiles ?? []).forEach((u: any) => {
+      map[u.uid] = {
+        name: u.fullName || u.displayName || u.name || "Unknown", // ✅ fixed — fullName is the actual field
+        avatar: u.avatar ?? u.photoURL,
+      };
+    });
+    return map;
+  }, [userProfiles]);
 
   const [postingStory, setPostingStory] = useState(false);
 
@@ -115,16 +115,23 @@ export default function ChatScreen({ navigation }: any) {
           const otherUserId =
             item.participants.find((p: string) => p !== currentUser?.uid) ?? "";
           const profile = profiles[otherUserId];
+
+          // ✅ fixed — unread means: someone else sent the last message,
+          // AND you haven't opened this chat since that message arrived.
+          // Replaces the old check that only cleared once you replied.
+          const lastReadByMe = item.lastReadAt?.[currentUser?.uid ?? ""] ?? 0;
+          const isUnread =
+            !!item.lastMessageAt &&
+            item.lastMessageSenderId !== currentUser?.uid &&
+            lastReadByMe < item.lastMessageAt;
+
           return (
             <RecentChatItem
               name={profile?.name ?? "..."}
               avatar={profile?.avatar}
               lastMessage={item.lastMessage}
               lastMessageAt={item.lastMessageAt}
-              isUnread={
-                !!item.lastMessageAt &&
-                item.lastMessageSenderId !== currentUser?.uid
-              }
+              isUnread={isUnread}
               onPress={() => handleOpenChat(item.id, otherUserId)}
             />
           );

@@ -50,12 +50,6 @@ export default function MessageScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     if (!currentUid || !isFocused || !messages.length) return;
-
-    const hasUnread = messages.some(
-      (m) => !m.isRead && m.senderId !== currentUid,
-    );
-    if (!hasUnread) return;
-
     chatService
       .markMessagesAsRead(chatId, currentUid)
       .catch((err) => console.error("Failed to mark messages as read:", err));

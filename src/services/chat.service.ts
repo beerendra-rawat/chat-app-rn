@@ -4,6 +4,7 @@ import {
   doc,
   addDoc,
   setDoc,
+  updateDoc,
   query,
   where,
   orderBy,
@@ -30,6 +31,7 @@ export const chatService = {
         lastMessage: "",
         lastMessageAt: serverTimestamp(),
         lastMessageSenderId: "",
+        lastReadAt: {}, // ✅ new — seeded so later dot-notation updates always succeed
       });
     }
   },
@@ -112,23 +114,35 @@ export const chatService = {
     if (!chatId || !currentUid) return;
 
     const messagesRef = collection(db, "chats", chatId, "messages");
-    // ✅ fixed — single-field filter only, avoids the composite index requirement
+    // ✅ single-field filter only, avoids the composite index requirement
     const q = query(messagesRef, where("isRead", "==", false));
 
     const snapshot = await getDocs(q);
-    if (snapshot.empty) return;
 
-    // ✅ fixed — exclude your own messages client-side instead of a second where()
+    // ✅ exclude your own messages client-side instead of a second where()
     const unreadFromOthers = snapshot.docs.filter(
       (docSnap) => docSnap.data().senderId !== currentUid,
     );
-    if (!unreadFromOthers.length) return;
 
-    const batch = writeBatch(db);
-    unreadFromOthers.forEach((docSnap) => {
-      batch.update(docSnap.ref, { isRead: true });
-    });
-    await batch.commit();
+    if (unreadFromOthers.length) {
+      const batch = writeBatch(db);
+      unreadFromOthers.forEach((docSnap) => {
+        batch.update(docSnap.ref, { isRead: true });
+      });
+      await batch.commit();
+    }
+
+    // ✅ new — stamp this chat as "read up to now" for the current user.
+    // Dot-notation targets only this user's key inside lastReadAt, leaving
+    // other participants' read timestamps untouched. Runs even if there were
+    // no unread messages, so opening an already-read chat still refreshes it.
+    try {
+      await updateDoc(doc(db, "chats", chatId), {
+        [`lastReadAt.${currentUid}`]: Date.now(),
+      });
+    } catch (err) {
+      console.error("Failed to update lastReadAt:", err);
+    }
   },
 
   subscribeToUserChats(uid: string, callback: (chats: ChatSummary[]) => void) {
@@ -153,6 +167,7 @@ export const chatService = {
               ? (data.lastMessageAt as Timestamp).toMillis()
               : 0,
             lastMessageSenderId: data.lastMessageSenderId ?? "",
+            lastReadAt: data.lastReadAt ?? {}, // ✅ new
           };
         })
         .sort((a, b) => b.lastMessageAt - a.lastMessageAt);

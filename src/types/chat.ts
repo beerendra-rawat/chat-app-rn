@@ -36,4 +36,5 @@ export interface ChatSummary {
   lastMessage: string;
   lastMessageAt: number;
   lastMessageSenderId: string;
+  lastReadAt?: Record<string, number>;
 }
