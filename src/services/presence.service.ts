@@ -33,8 +33,11 @@ export const presenceService = {
         { isOnline: false, lastSeen: serverTimestamp() },
         { merge: true },
       );
-    } catch (err) {
-      console.warn("presenceService.setOffline failed:", err); // ✅ caught, not thrown
+    } catch (err: any) {
+      // ✅ expected during logout races (auth already cleared) — don't log noise
+      if (err?.code !== "permission-denied") {
+        console.warn("presenceService.setOffline failed:", err);
+      }
     }
   },
 

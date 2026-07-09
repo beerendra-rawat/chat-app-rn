@@ -44,23 +44,34 @@ export const chatService = {
     const messagesRef = collection(db, "chats", chatId, "messages");
     const q = query(messagesRef, orderBy("clientCreatedAt", "desc"));
 
-    return onSnapshot(q, (snapshot) => {
-      const messages: Message[] = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as FirestoreMessage;
-        return {
-          id: docSnap.id,
-          text: data.text ?? "",
-          imageUrl: data.imageUrl,
-          type: data.type ?? "text",
-          senderId: data.senderId,
-          createdAt: data.createdAt
-            ? (data.createdAt as Timestamp).toMillis()
-            : data.clientCreatedAt,
-          isRead: data.isRead ?? false,
-        };
-      });
-      callback(messages);
-    });
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const messages: Message[] = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as FirestoreMessage;
+          return {
+            id: docSnap.id,
+            text: data.text ?? "",
+            imageUrl: data.imageUrl,
+            type: data.type ?? "text",
+            senderId: data.senderId,
+            createdAt: data.createdAt
+              ? (data.createdAt as Timestamp).toMillis()
+              : data.clientCreatedAt,
+            isRead: data.isRead ?? false,
+          };
+        });
+        callback(messages);
+      },
+      (err: any) => {
+        // ✅ fixed — permission-denied here almost always means the listener
+        // outlived a logout (auth cleared mid-flight); expected, not a bug.
+        // Anything else still logs so real issues aren't hidden.
+        if (err?.code !== "permission-denied") {
+          console.warn("chatService.subscribeToMessages failed:", err);
+        }
+      },
+    );
   },
 
   async sendMessage(chatId: string, senderId: string, text: string) {
@@ -189,24 +200,33 @@ export const chatService = {
     const chatsRef = collection(db, "chats");
     const q = query(chatsRef, where("participants", "array-contains", uid));
 
-    return onSnapshot(q, (snapshot) => {
-      const chats: ChatSummary[] = snapshot.docs
-        .map((docSnap) => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            participants: data.participants ?? [],
-            lastMessage: data.lastMessage ?? "",
-            lastMessageAt: data.lastMessageAt
-              ? (data.lastMessageAt as Timestamp).toMillis()
-              : 0,
-            lastMessageSenderId: data.lastMessageSenderId ?? "",
-            lastReadAt: data.lastReadAt ?? {},
-          };
-        })
-        .sort((a, b) => b.lastMessageAt - a.lastMessageAt);
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const chats: ChatSummary[] = snapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data();
+            return {
+              id: docSnap.id,
+              participants: data.participants ?? [],
+              lastMessage: data.lastMessage ?? "",
+              lastMessageAt: data.lastMessageAt
+                ? (data.lastMessageAt as Timestamp).toMillis()
+                : 0,
+              lastMessageSenderId: data.lastMessageSenderId ?? "",
+              lastReadAt: data.lastReadAt ?? {},
+            };
+          })
+          .sort((a, b) => b.lastMessageAt - a.lastMessageAt);
 
-      callback(chats);
-    });
+        callback(chats);
+      },
+      (err: any) => {
+        // ✅ fixed — same reasoning as subscribeToMessages
+        if (err?.code !== "permission-denied") {
+          console.warn("chatService.subscribeToUserChats failed:", err);
+        }
+      },
+    );
   },
 };

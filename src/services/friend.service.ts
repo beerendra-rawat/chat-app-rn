@@ -9,7 +9,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { User } from "../types/user";
-import { notificationService } from "./notification.service"; // ✅ new
+import { notificationService } from "./notification.service";
 
 export const friendService = {
   subscribeToUserRelations(
@@ -21,14 +21,22 @@ export const friendService = {
     }) => void,
   ) {
     const userRef = doc(db, "users", uid);
-    return onSnapshot(userRef, (snap) => {
-      const data = snap.data();
-      callback({
-        friends: data?.friends || [],
-        sentRequests: data?.sentRequests || [],
-        receivedRequests: data?.receivedRequests || [],
-      });
-    });
+    return onSnapshot(
+      userRef,
+      (snap) => {
+        const data = snap.data();
+        callback({
+          friends: data?.friends || [],
+          sentRequests: data?.sentRequests || [],
+          receivedRequests: data?.receivedRequests || [],
+        });
+      },
+      (err: any) => {
+        if (err?.code !== "permission-denied") {
+          console.warn("friendService.subscribeToUserRelations failed:", err);
+        }
+      },
+    );
   },
 
   async sendFriendRequest(currentUid: string, targetUid: string) {
@@ -41,7 +49,6 @@ export const friendService = {
     });
     await batch.commit();
 
-    // ✅ new — notify the target user of the incoming friend request
     try {
       const [sender] = await this.getUsersByIds([currentUid]);
       await notificationService.createNotification({
@@ -79,7 +86,6 @@ export const friendService = {
     });
     await batch.commit();
 
-    // ✅ new — notify the original requester that their request was accepted
     try {
       const [accepter] = await this.getUsersByIds([currentUid]);
       await notificationService.createNotification({
