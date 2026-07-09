@@ -9,9 +9,9 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { User } from "../types/user";
+import { notificationService } from "./notification.service"; // ✅ new
 
 export const friendService = {
-  // ✅ Real-time listener on current user's doc
   subscribeToUserRelations(
     uid: string,
     callback: (data: {
@@ -40,6 +40,20 @@ export const friendService = {
       receivedRequests: arrayUnion(currentUid),
     });
     await batch.commit();
+
+    // ✅ new — notify the target user of the incoming friend request
+    try {
+      const [sender] = await this.getUsersByIds([currentUid]);
+      await notificationService.createNotification({
+        userId: targetUid,
+        type: "friend_request",
+        fromUserId: currentUid,
+        fromUserName: sender?.fullName || "Someone",
+        fromUserAvatar: sender?.avatar,
+      });
+    } catch (err) {
+      console.error("Failed to create friend request notification:", err);
+    }
   },
 
   async cancelRequest(currentUid: string, targetUid: string) {
@@ -64,6 +78,20 @@ export const friendService = {
       friends: arrayUnion(currentUid),
     });
     await batch.commit();
+
+    // ✅ new — notify the original requester that their request was accepted
+    try {
+      const [accepter] = await this.getUsersByIds([currentUid]);
+      await notificationService.createNotification({
+        userId: requesterUid,
+        type: "friend_request_accepted",
+        fromUserId: currentUid,
+        fromUserName: accepter?.fullName || "Someone",
+        fromUserAvatar: accepter?.avatar,
+      });
+    } catch (err) {
+      console.error("Failed to create friend-accepted notification:", err);
+    }
   },
 
   async rejectFriendRequest(currentUid: string, requesterUid: string) {

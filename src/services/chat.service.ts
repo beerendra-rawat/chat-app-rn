@@ -16,6 +16,8 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { Message, FirestoreMessage, ChatSummary } from "../types/chat";
+import { notificationService } from "./notification.service"; // ✅ new
+import { friendService } from "./friend.service"; // ✅ new
 
 export const chatService = {
   buildChatId(uidA: string, uidB: string) {
@@ -31,7 +33,7 @@ export const chatService = {
         lastMessage: "",
         lastMessageAt: serverTimestamp(),
         lastMessageSenderId: "",
-        lastReadAt: {}, // ✅ new — seeded so later dot-notation updates always succeed
+        lastReadAt: {},
       });
     }
   },
@@ -83,6 +85,25 @@ export const chatService = {
       },
       { merge: true },
     );
+
+    // ✅ new — notify the recipient of the new message
+    try {
+      const recipientId = chatId.split("_").find((id) => id !== senderId);
+      if (recipientId) {
+        const [sender] = await friendService.getUsersByIds([senderId]);
+        await notificationService.createNotification({
+          userId: recipientId,
+          type: "message",
+          fromUserId: senderId,
+          fromUserName: sender?.fullName || "Someone",
+          fromUserAvatar: sender?.avatar,
+          message: text,
+          chatId,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to create message notification:", err);
+    }
   },
 
   async sendImageMessage(chatId: string, senderId: string, imageUrl: string) {
@@ -108,18 +129,35 @@ export const chatService = {
       },
       { merge: true },
     );
+
+    // ✅ new — notify the recipient of the new image message
+    try {
+      const recipientId = chatId.split("_").find((id) => id !== senderId);
+      if (recipientId) {
+        const [sender] = await friendService.getUsersByIds([senderId]);
+        await notificationService.createNotification({
+          userId: recipientId,
+          type: "message",
+          fromUserId: senderId,
+          fromUserName: sender?.fullName || "Someone",
+          fromUserAvatar: sender?.avatar,
+          message: "📷 Photo",
+          chatId,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to create image message notification:", err);
+    }
   },
 
   async markMessagesAsRead(chatId: string, currentUid: string) {
     if (!chatId || !currentUid) return;
 
     const messagesRef = collection(db, "chats", chatId, "messages");
-    // ✅ single-field filter only, avoids the composite index requirement
     const q = query(messagesRef, where("isRead", "==", false));
 
     const snapshot = await getDocs(q);
 
-    // ✅ exclude your own messages client-side instead of a second where()
     const unreadFromOthers = snapshot.docs.filter(
       (docSnap) => docSnap.data().senderId !== currentUid,
     );
@@ -132,10 +170,6 @@ export const chatService = {
       await batch.commit();
     }
 
-    // ✅ new — stamp this chat as "read up to now" for the current user.
-    // Dot-notation targets only this user's key inside lastReadAt, leaving
-    // other participants' read timestamps untouched. Runs even if there were
-    // no unread messages, so opening an already-read chat still refreshes it.
     try {
       await updateDoc(doc(db, "chats", chatId), {
         [`lastReadAt.${currentUid}`]: Date.now(),
@@ -167,7 +201,7 @@ export const chatService = {
               ? (data.lastMessageAt as Timestamp).toMillis()
               : 0,
             lastMessageSenderId: data.lastMessageSenderId ?? "",
-            lastReadAt: data.lastReadAt ?? {}, // ✅ new
+            lastReadAt: data.lastReadAt ?? {},
           };
         })
         .sort((a, b) => b.lastMessageAt - a.lastMessageAt);
