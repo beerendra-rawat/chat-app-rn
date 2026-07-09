@@ -9,16 +9,14 @@ import { useStories } from "../../hooks/useStories";
 import { useRecentChats } from "../../hooks/useRecentChats";
 import { useUserProfiles } from "../../hooks/queries/useUserProfiles";
 import { storyService } from "../../services/story.service";
-import { pickImageFromLibrary } from "../../utils/imagePicker"; // ✅ back to single-image
+import { pickImageFromLibrary } from "../../utils/imagePicker";
 import { uploadToCloudinary } from "../../utils/uploadToCloudinary";
 import Colors from "../../constants/Colors";
 
 export default function ChatScreen({ navigation }: any) {
   const currentUser = useAppSelector((state) => state.auth.user);
   const friends = useAppSelector((state) => state.friends.friends);
-  const friendIds = (friends ?? [])
-    .map((f: any) => f.uid)
-    .filter((id: string | undefined): id is string => !!id);
+  const friendIds = friends ?? []; // ✅ fixed — friends is already string[] of UIDs
 
   const { storyGroups } = useStories(currentUser?.uid, friendIds);
   const {
@@ -29,21 +27,18 @@ export default function ChatScreen({ navigation }: any) {
   const { data: userProfiles } = useUserProfiles(otherUserIds);
 
   const profiles = useMemo(() => {
-    const map: Record<string, { name: string; avatar?: string | null }> = {};
-    (userProfiles ?? []).forEach((u: any) => {
-      map[u.uid] = {
-        name: u.displayName ?? u.name ?? "Unknown",
-        avatar: u.photoURL ?? u.avatar,
-      };
-    });
-    return map;
-  }, [userProfiles]);
+  const map: Record<string, { name: string; avatar?: string | null }> = {};
+  (userProfiles ?? []).forEach((u: any) => {
+    map[u.uid] = {
+      name: u.fullName || u.displayName || u.name || "Unknown", // ✅ fixed — fullName is the actual field
+      avatar: u.avatar ?? u.photoURL,
+    };
+  });
+  return map;
+}, [userProfiles]);
 
   const [postingStory, setPostingStory] = useState(false);
 
-  // ✅ posts ONE story per call. Tap "add story" now, again in an hour, again tomorrow —
-  // each call creates a new Story doc with its own timestamp, and they all stack
-  // together under your avatar in the order they were posted.
   const handleAddStory = useCallback(async () => {
     if (!currentUser?.uid || postingStory) return;
     try {
@@ -107,7 +102,6 @@ export default function ChatScreen({ navigation }: any) {
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <View>
-            <Text style={styles.title}>Chats</Text>
             <StoryBar
               currentUid={currentUser?.uid}
               currentUserAvatar={currentUser?.photoURL}
@@ -156,13 +150,6 @@ export default function ChatScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    color: Colors.text,
-  },
   separator: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: Colors.border,
