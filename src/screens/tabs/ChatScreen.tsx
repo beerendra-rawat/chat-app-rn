@@ -1,9 +1,17 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import AppContainer from "../../components/common/AppContainer";
 import StoryBar from "../../components/chat/StoryBar";
 import RecentChatItem from "../../components/chat/RecentChatItem";
 import UploadProgressOverlay from "../../components/chat/UploadProgressOverlay";
+import ChatListSkeleton from "../../components/chat/ChatListSkeleton"; // ✅ new
 import { useAppSelector } from "../../redux/store/hooks";
 import { useStories } from "../../hooks/useStories";
 import { useRecentChats } from "../../hooks/useRecentChats";
@@ -16,7 +24,7 @@ import Colors from "../../constants/Colors";
 export default function ChatScreen({ navigation }: any) {
   const currentUser = useAppSelector((state) => state.auth.user);
   const friends = useAppSelector((state) => state.friends.friends);
-  const friendIds = friends ?? []; // ✅ fixed — friends is already string[] of UIDs
+  const friendIds = friends ?? [];
 
   const { storyGroups } = useStories(currentUser?.uid, friendIds);
   const {
@@ -30,7 +38,7 @@ export default function ChatScreen({ navigation }: any) {
     const map: Record<string, { name: string; avatar?: string | null }> = {};
     (userProfiles ?? []).forEach((u: any) => {
       map[u.uid] = {
-        name: u.fullName || u.displayName || u.name || "Unknown", // ✅ fixed — fullName is the actual field
+        name: u.fullName || u.displayName || u.name || "Unknown",
         avatar: u.avatar ?? u.photoURL,
       };
     });
@@ -38,6 +46,15 @@ export default function ChatScreen({ navigation }: any) {
   }, [userProfiles]);
 
   const [postingStory, setPostingStory] = useState(false);
+
+  // ✅ new — pull-to-refresh. Chats/stories are already live via onSnapshot,
+  // so there's nothing to manually refetch; this just gives users the
+  // expected pull gesture with a brief, honest spinner.
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 600);
+  }, []);
 
   const handleAddStory = useCallback(async () => {
     if (!currentUser?.uid || postingStory) return;
@@ -95,11 +112,28 @@ export default function ChatScreen({ navigation }: any) {
     [navigation, profiles],
   );
 
+  // ✅ new — skeleton while chats are first loading, matches the real layout
+  if (chatsLoading) {
+    return (
+      <AppContainer noHorizontalPadding noVerticalPadding>
+        <ChatListSkeleton />
+      </AppContainer>
+    );
+  }
+
   return (
     <AppContainer noHorizontalPadding noVerticalPadding>
       <FlatList
         data={chats}
         keyExtractor={(item) => item.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }
         ListHeaderComponent={
           <View>
             <StoryBar
@@ -116,9 +150,6 @@ export default function ChatScreen({ navigation }: any) {
             item.participants.find((p: string) => p !== currentUser?.uid) ?? "";
           const profile = profiles[otherUserId];
 
-          // ✅ fixed — unread means: someone else sent the last message,
-          // AND you haven't opened this chat since that message arrived.
-          // Replaces the old check that only cleared once you replied.
           const lastReadByMe = item.lastReadAt?.[currentUser?.uid ?? ""] ?? 0;
           const isUnread =
             !!item.lastMessageAt &&
@@ -141,13 +172,11 @@ export default function ChatScreen({ navigation }: any) {
           chats.length === 0 ? styles.emptyContainer : undefined
         }
         ListEmptyComponent={
-          !chatsLoading ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyText}>
-                No chats yet — start a conversation from Friends 👋
-              </Text>
-            </View>
-          ) : null
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>
+              No chats yet — start a conversation from Friends 👋
+            </Text>
+          </View>
         }
       />
 

@@ -1,8 +1,8 @@
+import { useState, useCallback } from "react";
 import {
-  ActivityIndicator, // ✅ new import
+  ActivityIndicator,
   Alert,
   Image,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AppContainer from "../../components/common/AppContainer";
 import CustomInput from "../../components/auth/CustomInput";
 import PrimaryButton from "../../components/auth/PrimaryButton";
+import ProfileSkeleton from "../../components/common/ProfileSkeleton"; // ✅ new
 import { useAppSelector } from "../../redux/store/hooks";
 import { useAuth } from "../../hooks/useAuth";
 import { useProfile } from "../../hooks/useProfile";
@@ -30,8 +31,22 @@ export default function ProfileScreen({ navigation }: any) {
     handleAvatarPress,
     saveProfile,
     saving,
-    uploadingImage, // ✅ new
+    uploadingImage,
+    refetchProfile, // ✅ new — assumes useProfile exposes a refetch; see note below
   } = useProfile();
+
+  // ✅ new — pull-to-refresh support
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      if (refetchProfile) {
+        await refetchProfile();
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchProfile]);
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure?", [
@@ -51,113 +66,109 @@ export default function ProfileScreen({ navigation }: any) {
     ]);
   };
 
+  // ✅ fixed — was a plain "Loading profile..." text, now the skeleton
   if (!user) {
     return (
       <AppContainer>
-        <View style={styles.centered}>
-          <Text>Loading profile...</Text>
-        </View>
+        <ProfileSkeleton />
       </AppContainer>
     );
   }
 
   return (
-    <AppContainer>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Edit Button */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => (isEditing ? saveProfile() : setIsEditing(true))}
-            disabled={saving}
-          >
-            <Ionicons
-              name={isEditing ? "checkmark" : "create-outline"}
-              size={28}
-              color="#4F46E5"
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Avatar */}
+    <AppContainer
+      scrollable // ✅ new — AppContainer now owns scrolling (replaces the inline ScrollView)
+      refreshing={refreshing}
+      onRefresh={handleRefresh}
+    >
+      {/* Edit Button */}
+      <View style={styles.header}>
         <TouchableOpacity
-          style={styles.avatarContainer}
-          onPress={
-            isEditing
-              ? !uploadingImage
-                ? handleAvatarPress
-                : undefined
-              : profileImage
-                ? () =>
-                    navigation.navigate("ViewImage", { imageUri: profileImage })
-                : undefined
-          }
-          activeOpacity={0.8}
-          disabled={uploadingImage}
+          style={styles.editButton}
+          onPress={() => (isEditing ? saveProfile() : setIsEditing(true))}
+          disabled={saving}
         >
-          {profileImage ? (
-            <Image source={{ uri: profileImage }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={70} color="#9CA3AF" />
-            </View>
-          )}
-
-          {/* ✅ Loader overlay while uploading */}
-          {uploadingImage && (
-            <View style={styles.avatarOverlay}>
-              <ActivityIndicator size="large" color="#fff" />
-            </View>
-          )}
-
-          {isEditing && !uploadingImage && (
-            <View style={styles.cameraButton}>
-              <Ionicons name="camera" size={20} color="#fff" />
-            </View>
-          )}
+          <Ionicons
+            name={isEditing ? "checkmark" : "create-outline"}
+            size={28}
+            color="#4F46E5"
+          />
         </TouchableOpacity>
+      </View>
 
-        {/* Name & Bio */}
-        {!isEditing ? (
-          <>
-            <Text style={styles.name}>{fullName}</Text>
-            <Text style={styles.bio}>{bio || "No bio yet"}</Text>
-          </>
+      {/* Avatar */}
+      <TouchableOpacity
+        style={styles.avatarContainer}
+        onPress={
+          isEditing
+            ? !uploadingImage
+              ? handleAvatarPress
+              : undefined
+            : profileImage
+              ? () =>
+                  navigation.navigate("ViewImage", { imageUri: profileImage })
+              : undefined
+        }
+        activeOpacity={0.8}
+        disabled={uploadingImage}
+      >
+        {profileImage ? (
+          <Image source={{ uri: profileImage }} style={styles.avatar} />
         ) : (
-          <View style={styles.form}>
-            <CustomInput
-              label="Full Name"
-              value={fullName}
-              onChangeText={setFullName}
-            />
-            <CustomInput
-              label="Bio"
-              placeholder="Write something about yourself..."
-              value={bio}
-              onChangeText={setBio}
-              multiline
-              numberOfLines={4}
-            />
+          <View style={styles.avatarPlaceholder}>
+            <Ionicons name="person" size={70} color="#9CA3AF" />
           </View>
         )}
 
-        <View style={{ flex: 1 }} />
+        {uploadingImage && (
+          <View style={styles.avatarOverlay}>
+            <ActivityIndicator size="large" color="#fff" />
+          </View>
+        )}
 
-        <PrimaryButton
-          title="Logout"
-          onPress={handleLogout}
-          style={styles.logoutButton}
-        />
-      </ScrollView>
+        {isEditing && !uploadingImage && (
+          <View style={styles.cameraButton}>
+            <Ionicons name="camera" size={20} color="#fff" />
+          </View>
+        )}
+      </TouchableOpacity>
+
+      {/* Name & Bio */}
+      {!isEditing ? (
+        <>
+          <Text style={styles.name}>{fullName}</Text>
+          <Text style={styles.bio}>{bio || "No bio yet"}</Text>
+        </>
+      ) : (
+        <View style={styles.form}>
+          <CustomInput
+            label="Full Name"
+            value={fullName}
+            onChangeText={setFullName}
+          />
+          <CustomInput
+            label="Bio"
+            placeholder="Write something about yourself..."
+            value={bio}
+            onChangeText={setBio}
+            multiline
+            numberOfLines={4}
+          />
+        </View>
+      )}
+
+      <View style={{ flex: 1 }} />
+
+      <PrimaryButton
+        title="Logout"
+        onPress={handleLogout}
+        style={styles.logoutButton}
+      />
     </AppContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, padding: 20 },
   header: {
     width: "100%",
     alignItems: "flex-end",
@@ -197,7 +208,6 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: "#fff",
   },
-  // ✅ New: dark overlay + spinner on top of the avatar
   avatarOverlay: {
     position: "absolute",
     top: 0,
@@ -237,10 +247,5 @@ const styles = StyleSheet.create({
   logoutButton: {
     backgroundColor: "#EF4444",
     marginTop: 40,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
   },
 });

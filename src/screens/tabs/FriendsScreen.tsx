@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   StyleSheet,
-  ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
 } from "react-native";
@@ -13,16 +12,16 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import AppContainer from "../../components/common/AppContainer";
 import SearchBar from "../../components/common/SearchBar";
 import FriendListItem from "../../components/common/FriendListItem";
+import PeopleListSkeleton from "../../components/common/PeopleListSkeleton"; // ✅ new
 import { useAppSelector } from "../../redux/store/hooks";
 import { useUserProfiles } from "../../hooks/queries/useUserProfiles";
 import { useFriendMutations } from "../../hooks/queries/useFriendMutations";
-import { RootStackParamList } from "../../navigation/types"; // ✅ add
+import { RootStackParamList } from "../../navigation/types";
 import { User } from "../../types/user";
 import Colors from "../../constants/Colors";
 
 type Tab = "requests" | "friends";
 
-// ✅ typed navigation for this screen
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function FriendsScreen() {
@@ -30,8 +29,8 @@ export default function FriendsScreen() {
   const [tab, setTab] = useState<Tab>("requests");
   const [refreshing, setRefreshing] = useState(false);
 
-  const navigation = useNavigation<NavigationProp>(); // ✅ add
-  const currentUid = useAppSelector((state) => state.auth.user?.uid); // ✅ add
+  const navigation = useNavigation<NavigationProp>();
+  const currentUid = useAppSelector((state) => state.auth.user?.uid);
 
   const friendIds = useAppSelector((state) => state.friends.friends);
   const receivedIds = useAppSelector((state) => state.friends.receivedRequests);
@@ -76,11 +75,9 @@ export default function FriendsScreen() {
     }
   }, [refetchFriends, refetchRequests]);
 
-  // ✅ builds a stable chatId regardless of who taps first
   const buildChatId = (uidA: string, uidB: string) =>
     [uidA, uidB].sort().join("_");
 
-  // ✅ this was missing — actually navigates to MessageScreen
   const handleOpenChat = (user: User) => {
     if (!currentUid) return;
     navigation.navigate("ChatDetail", {
@@ -124,9 +121,8 @@ export default function FriendsScreen() {
       </View>
 
       {loading && !refreshing ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.primary || "#007AFF"} />
-        </View>
+        // ✅ fixed — was ActivityIndicator, now matches the app's skeleton pattern
+        <PeopleListSkeleton />
       ) : (
         <FlatList
           data={data}
@@ -143,7 +139,7 @@ export default function FriendsScreen() {
               onAccept={(uid) => acceptRequest.mutate(uid)}
               onReject={(uid) => rejectRequest.mutate(uid)}
               onRemove={(uid) => removeFriend.mutate(uid)}
-              onPress={handleOpenChat} // ✅ this line was missing before
+              onPress={handleOpenChat}
             />
           )}
           refreshControl={

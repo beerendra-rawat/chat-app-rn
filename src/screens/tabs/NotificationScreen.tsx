@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   SectionList,
   StyleSheet,
@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import AppContainer from "../../components/common/AppContainer";
 import NotificationItem from "../../components/notification/NotificationItem";
+import NotificationListSkeleton from "../../components/notification/NotificationListSkeleton"; // ✅ new
 import { useAppSelector } from "../../redux/store/hooks";
 import { useNotifications } from "../../hooks/useNotifications";
 import { notificationService } from "../../services/notification.service";
@@ -21,6 +22,16 @@ export default function NotificationScreen({ navigation }: any) {
   const { notifications, loading, unreadCount } = useNotifications(
     currentUser?.uid,
   );
+
+  // ✅ new — drives AppContainer's built-in RefreshControl instead of
+  // placing one directly on SectionList
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    // notifications are already live via onSnapshot — nothing to refetch,
+    // this just gives the expected pull gesture with a brief spinner
+    setTimeout(() => setRefreshing(false), 600);
+  }, []);
 
   const sections = useMemo(
     () => groupByDateLabel(notifications, (n) => n.createdAt),
@@ -64,7 +75,6 @@ export default function NotificationScreen({ navigation }: any) {
       }
 
       if (notification.type === "friend_request_accepted") {
-        // ✅ friend is now accepted — open (or start) a chat with them
         const chatId = chatService.buildChatId(
           currentUser.uid,
           notification.fromUserId,
@@ -89,10 +99,26 @@ export default function NotificationScreen({ navigation }: any) {
     [navigation, currentUser],
   );
 
+  if (loading) {
+    return (
+      <AppContainer noHorizontalPadding noVerticalPadding>
+        {/* <View style={styles.header}>
+          <Text style={styles.title}>Notifications</Text>
+        </View> */}
+        <NotificationListSkeleton />
+      </AppContainer>
+    );
+  }
+
   return (
-    <AppContainer noHorizontalPadding noVerticalPadding>
-      <View style={styles.header}>
-        <Text style={styles.title}>Notifications</Text>
+    <AppContainer
+      noHorizontalPadding
+      noVerticalPadding
+      scrollable // ✅ new — AppContainer now owns scrolling + pull-to-refresh
+      refreshing={refreshing}
+      onRefresh={handleRefresh}
+    >
+      <View>
         {unreadCount > 0 && (
           <TouchableOpacity onPress={handleMarkAllRead}>
             <Text style={styles.markAllText}>Mark all read</Text>
@@ -103,6 +129,7 @@ export default function NotificationScreen({ navigation }: any) {
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
+        scrollEnabled={false} // ✅ new — outer AppContainer ScrollView handles scrolling
         renderItem={({ item }) => (
           <NotificationItem
             notification={item}
@@ -114,15 +141,10 @@ export default function NotificationScreen({ navigation }: any) {
         )}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         stickySectionHeadersEnabled={false}
-        contentContainerStyle={
-          sections.length === 0 ? styles.emptyContainer : undefined
-        }
         ListEmptyComponent={
-          !loading ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyText}>You're all caught up 🎉</Text>
-            </View>
-          ) : null
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>You're all caught up 🎉</Text>
+          </View>
         }
       />
     </AppContainer>
@@ -130,15 +152,15 @@ export default function NotificationScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  title: { fontSize: 28, fontWeight: "700", color: Colors.text },
+  // header: {
+  //   flexDirection: "row",
+  //   justifyContent: "space-between",
+  //   alignItems: "center",
+  //   paddingHorizontal: 16,
+  //   paddingTop: 12,
+  //   paddingBottom: 8,
+  // },
+  // title: { fontSize: 28, fontWeight: "700", color: Colors.text },
   markAllText: { fontSize: 13, color: Colors.primary, fontWeight: "600" },
   sectionHeader: {
     fontSize: 13,
@@ -154,7 +176,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
     marginLeft: 78,
   },
-  emptyContainer: { flexGrow: 1 },
   empty: {
     flex: 1,
     justifyContent: "center",

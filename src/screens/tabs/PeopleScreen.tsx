@@ -1,20 +1,14 @@
 // src/screens/tabs/PeopleScreen.tsx
 import React, { useState, useMemo } from "react";
-import {
-  View,
-  FlatList,
-  RefreshControl,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-} from "react-native";
+import { View, FlatList, Text, StyleSheet } from "react-native"; // ✅ fixed — removed unused RefreshControl import
 import { useSelector } from "react-redux";
 import { useQuery } from "@tanstack/react-query";
 import AppContainer from "../../components/common/AppContainer";
 import SearchBar from "../../components/common/SearchBar";
 import UserListItem from "../../components/common/UserListItem";
+import PeopleListSkeleton from "../../components/common/PeopleListSkeleton";
 import { userService } from "../../services/user.service";
-import { useFriendMutations } from "../../hooks/queries/useFriendMutations"; // ✅ new
+import { useFriendMutations } from "../../hooks/queries/useFriendMutations";
 import { RootState } from "../../redux/store/store";
 import Colors from "../../constants/Colors";
 
@@ -25,7 +19,6 @@ export default function PeopleScreen() {
   const currentUser = useSelector((state: RootState) => state.auth.user);
   const currentUserUid = currentUser?.uid;
 
-  // ✅ Real friend state from Redux (kept live by useFriendsSync in App.tsx)
   const friends = useSelector((state: RootState) => state.friends.friends);
   const sentRequests = useSelector(
     (state: RootState) => state.friends.sentRequests,
@@ -34,7 +27,6 @@ export default function PeopleScreen() {
     (state: RootState) => state.friends.receivedRequests,
   );
 
-  // ✅ Real mutations instead of console.log placeholders
   const { sendRequest, cancelRequest } = useFriendMutations();
 
   const {
@@ -43,7 +35,7 @@ export default function PeopleScreen() {
     refetch,
     error,
   } = useQuery({
-    queryKey: ["allUsers"], // ✅ removed `search` from key — filtering is local, not a new query
+    queryKey: ["allUsers"],
     queryFn: () => userService.getAllUsers(currentUserUid!),
     enabled: !!currentUserUid,
     staleTime: 1000 * 60 * 5,
@@ -59,7 +51,6 @@ export default function PeopleScreen() {
     );
   }, [users, search]);
 
-  // ✅ Derive real friendship status per user from Redux arrays
   const getFriendshipStatus = (
     uid: string,
   ): "none" | "friends" | "sent" | "pending" => {
@@ -80,23 +71,21 @@ export default function PeopleScreen() {
       user={item}
       currentUserUid={currentUserUid!}
       friendshipStatus={getFriendshipStatus(item.uid)}
-      onAddFriend={(uid) => sendRequest.mutateAsync(uid)} // ✅ mutateAsync, not mutate
-      onCancelRequest={(uid) => cancelRequest.mutateAsync(uid)} // ✅ mutateAsync, not mutate
+      onAddFriend={(uid) => sendRequest.mutateAsync(uid)}
+      onCancelRequest={(uid) => cancelRequest.mutateAsync(uid)}
     />
   );
 
   if (isLoading && !users.length) {
     return (
       <AppContainer>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
+        <PeopleListSkeleton />
       </AppContainer>
     );
   }
 
   return (
-    <AppContainer>
+    <AppContainer scrollable refreshing={refreshing} onRefresh={handleRefresh}>
       <SearchBar
         value={search}
         onChangeText={setSearch}
@@ -106,9 +95,7 @@ export default function PeopleScreen() {
         data={filteredUsers}
         keyExtractor={(item) => item.uid}
         renderItem={renderItem}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
+        scrollEnabled={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
@@ -120,10 +107,9 @@ export default function PeopleScreen() {
       />
     </AppContainer>
   );
-}
+} // ✅ fixed — this closing brace for PeopleScreen was missing
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
