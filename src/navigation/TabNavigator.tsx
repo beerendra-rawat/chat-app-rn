@@ -10,7 +10,7 @@ import FriendsScreen from "../screens/tabs/FriendsScreen";
 import PeopleScreen from "../screens/tabs/PeopleScreen";
 import NotificationScreen from "../screens/tabs/NotificationScreen";
 import ProfileScreen from "../screens/tabs/ProfileScreen";
-import { TabParamList } from "./types";
+import { TabParamList } from "../types/navigation";
 import { useAppSelector } from "../redux/store/hooks"; // ✅ new
 import { useNotifications } from "../hooks/useNotifications"; // ✅ new
 

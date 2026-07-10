@@ -11,14 +11,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import AppContainer from "../../components/common/AppContainer"; // ✅ new
 import UserAvatar from "../../components/common/UserAvatar";
 import StoryProgressBar from "../../components/chat/StoryProgressBar";
 import { storyService } from "../../services/story.service";
-import { RootStackScreenProps } from "../../navigation/types";
+import { RootStackScreenProps } from "../../types/navigation";
 
 const STORY_DURATION_MS = 5000;
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-const MEDIA_HEIGHT = SCREEN_HEIGHT * 0.75; // ✅ new — story media takes 75% of screen height
+const MEDIA_HEIGHT = SCREEN_HEIGHT * 0.75;
 
 type Props = RootStackScreenProps<"StoryViewer">;
 
@@ -127,65 +128,74 @@ export default function StoryViewerScreen({ navigation, route }: Props) {
   if (!group || !story) return null;
 
   return (
-    <View style={styles.container}>
-      {/* ✅ new — media card sits in the middle 75% of the screen, not edge-to-edge */}
-      <View style={styles.mediaWrapper}>
-        <Image
-          source={{ uri: story.mediaUrl }}
-          style={styles.image}
-          resizeMode="contain" // ✅ fixed — was "cover", which cropped the sides
-          onLoadEnd={() => setImageLoading(false)}
-        />
+    // ✅ new — AppContainer replaces the raw <View>: black background,
+    // light status bar (icons visible on black), no padding, not scrollable
+    // since this screen uses absolute-positioned overlays, not a list
+    <AppContainer
+      backgroundColor="#000"
+      statusBarStyle="light"
+      noHorizontalPadding
+      noVerticalPadding
+    >
+      <View style={styles.container}>
+        <View style={styles.mediaWrapper}>
+          <Image
+            source={{ uri: story.mediaUrl }}
+            style={styles.image}
+            resizeMode="contain"
+            onLoadEnd={() => setImageLoading(false)}
+          />
 
-        {imageLoading && (
-          <View style={styles.loaderOverlay}>
-            <ActivityIndicator size="large" color="#FFF" />
-          </View>
-        )}
+          {imageLoading && (
+            <View style={styles.loaderOverlay}>
+              <ActivityIndicator size="large" color="#FFF" />
+            </View>
+          )}
 
-        <Pressable
-          style={styles.leftZone}
-          onPress={goToPrevStory}
-          onLongPress={() => setPaused(true)}
-          onPressOut={() => setPaused(false)}
-        />
-        <Pressable
-          style={styles.rightZone}
-          onPress={goToNextStory}
-          onLongPress={() => setPaused(true)}
-          onPressOut={() => setPaused(false)}
-        />
-      </View>
-
-      <SafeAreaView style={styles.overlay} edges={["top"]}>
-        <StoryProgressBar
-          count={group.stories.length}
-          activeIndex={storyIndex}
-          progress={progress}
-        />
-
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <UserAvatar image={group.userAvatar} size={34} />
-            <Text style={styles.userName}>{group.userName}</Text>
-          </View>
-
-          <View style={styles.headerRight}>
-            {isOwnStory && (
-              <Pressable onPress={handleDelete} style={styles.iconButton}>
-                <Ionicons name="trash-outline" size={22} color="#FFF" />
-              </Pressable>
-            )}
-            <Pressable
-              onPress={() => navigation.goBack()}
-              style={styles.iconButton}
-            >
-              <Ionicons name="close" size={26} color="#FFF" />
-            </Pressable>
-          </View>
+          <Pressable
+            style={styles.leftZone}
+            onPress={goToPrevStory}
+            onLongPress={() => setPaused(true)}
+            onPressOut={() => setPaused(false)}
+          />
+          <Pressable
+            style={styles.rightZone}
+            onPress={goToNextStory}
+            onLongPress={() => setPaused(true)}
+            onPressOut={() => setPaused(false)}
+          />
         </View>
-      </SafeAreaView>
-    </View>
+
+        <SafeAreaView style={styles.overlay} edges={["top"]}>
+          <StoryProgressBar
+            count={group.stories.length}
+            activeIndex={storyIndex}
+            progress={progress}
+          />
+
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <UserAvatar image={group.userAvatar} size={34} />
+              <Text style={styles.userName}>{group.userName}</Text>
+            </View>
+
+            <View style={styles.headerRight}>
+              {isOwnStory && (
+                <Pressable onPress={handleDelete} style={styles.iconButton}>
+                  <Ionicons name="trash-outline" size={22} color="#FFF" />
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => navigation.goBack()}
+                style={styles.iconButton}
+              >
+                <Ionicons name="close" size={26} color="#FFF" />
+              </Pressable>
+            </View>
+          </View>
+        </SafeAreaView>
+      </View>
+    </AppContainer>
   );
 }
 
@@ -193,13 +203,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#000",
-    justifyContent: "center", // ✅ new — centers the 75%-height media vertically
+    justifyContent: "center",
   },
   mediaWrapper: {
-    // ✅ new — replaces the old flex:1 image; now a fixed-height card
     height: MEDIA_HEIGHT,
-    marginTop: 60, // ✅ top spacing, clears the header/progress bar area
-    marginBottom: 40, // ✅ bottom spacing
+    marginTop: 60,
+    marginBottom: 40,
     marginHorizontal: 0,
     borderRadius: 16,
     overflow: "hidden",

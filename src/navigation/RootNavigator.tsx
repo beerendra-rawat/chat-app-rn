@@ -10,7 +10,7 @@ import VerifyCodeScreen from "../screens/auth/VerifyCodeScreen";
 import ViewImageScreen from "../screens/common/ViewImageScreen";
 import MessageScreen from "../screens/common/MessageScreen";
 import StoryViewerScreen from "../screens/common/StoryViewerScreen";
-import { RootStackParamList } from "./types";
+import { RootStackParamList } from "../types/navigation";
 import Colors from "../constants/Colors";
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();

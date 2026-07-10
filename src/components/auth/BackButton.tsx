@@ -1,7 +1,6 @@
-import React from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import Colors from '../../constants/Colors';
+import { TouchableOpacity, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import Colors from "../../constants/Colors";
 
 type Props = { onPress: () => void };
 
@@ -17,10 +16,8 @@ const styles = StyleSheet.create({
   button: {
     width: 48,
     height: 48,
-    borderRadius: 16,
-    backgroundColor: '#EEF0F4',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
   },
 });
