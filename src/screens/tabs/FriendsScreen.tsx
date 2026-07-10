@@ -12,7 +12,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import AppContainer from "../../components/common/AppContainer";
 import SearchBar from "../../components/common/SearchBar";
 import FriendListItem from "../../components/common/FriendListItem";
-import PeopleListSkeleton from "../../components/common/PeopleListSkeleton"; // ✅ new
+import PeopleListSkeleton from "../../components/common/PeopleListSkeleton";
 import { useAppSelector } from "../../redux/store/hooks";
 import { useUserProfiles } from "../../hooks/queries/useUserProfiles";
 import { useFriendMutations } from "../../hooks/queries/useFriendMutations";
@@ -20,13 +20,13 @@ import { RootStackParamList } from "../../navigation/types";
 import { User } from "../../types/user";
 import Colors from "../../constants/Colors";
 
-type Tab = "requests" | "friends";
+type Tab = "friends" | "requests"; // ✅ reordered — friends first
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function FriendsScreen() {
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<Tab>("requests");
+  const [tab, setTab] = useState<Tab>("friends"); // ✅ fixed — default selected tab is now Friends
   const [refreshing, setRefreshing] = useState(false);
 
   const navigation = useNavigation<NavigationProp>();
@@ -97,17 +97,7 @@ export default function FriendsScreen() {
       />
 
       <View style={styles.tabRow}>
-        <TouchableOpacity
-          style={[styles.tab, tab === "requests" && styles.tabActive]}
-          onPress={() => setTab("requests")}
-        >
-          <Text
-            style={[styles.tabText, tab === "requests" && styles.tabTextActive]}
-          >
-            Requests {requests.length > 0 ? `(${requests.length})` : ""}
-          </Text>
-        </TouchableOpacity>
-
+        {/* ✅ reordered — Friends tab now first (left) */}
         <TouchableOpacity
           style={[styles.tab, tab === "friends" && styles.tabActive]}
           onPress={() => setTab("friends")}
@@ -118,10 +108,21 @@ export default function FriendsScreen() {
             Friends {friends.length > 0 ? `(${friends.length})` : ""}
           </Text>
         </TouchableOpacity>
+
+        {/* ✅ reordered — Requests tab now second (right) */}
+        <TouchableOpacity
+          style={[styles.tab, tab === "requests" && styles.tabActive]}
+          onPress={() => setTab("requests")}
+        >
+          <Text
+            style={[styles.tabText, tab === "requests" && styles.tabTextActive]}
+          >
+            Requests {requests.length > 0 ? `(${requests.length})` : ""}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {loading && !refreshing ? (
-        // ✅ fixed — was ActivityIndicator, now matches the app's skeleton pattern
         <PeopleListSkeleton />
       ) : (
         <FlatList

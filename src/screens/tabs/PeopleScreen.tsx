@@ -1,6 +1,6 @@
 // src/screens/tabs/PeopleScreen.tsx
 import React, { useState, useMemo } from "react";
-import { View, FlatList, Text, StyleSheet } from "react-native"; // ✅ fixed — removed unused RefreshControl import
+import { View, FlatList, RefreshControl, Text, StyleSheet } from "react-native";
 import { useSelector } from "react-redux";
 import { useQuery } from "@tanstack/react-query";
 import AppContainer from "../../components/common/AppContainer";
@@ -85,7 +85,10 @@ export default function PeopleScreen() {
   }
 
   return (
-    <AppContainer scrollable refreshing={refreshing} onRefresh={handleRefresh}>
+    // ✅ fixed — AppContainer back to default (non-scrollable) mode.
+    // FlatList now owns scrolling + RefreshControl directly, which keeps
+    // virtualization intact for what can be a large, unbounded user list.
+    <AppContainer>
       <SearchBar
         value={search}
         onChangeText={setSearch}
@@ -95,7 +98,14 @@ export default function PeopleScreen() {
         data={filteredUsers}
         keyExtractor={(item) => item.uid}
         renderItem={renderItem}
-        scrollEnabled={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
@@ -107,7 +117,7 @@ export default function PeopleScreen() {
       />
     </AppContainer>
   );
-} // ✅ fixed — this closing brace for PeopleScreen was missing
+}
 
 const styles = StyleSheet.create({
   emptyContainer: {
