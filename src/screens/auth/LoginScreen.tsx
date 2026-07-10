@@ -15,6 +15,7 @@ import CustomInput from "../../components/auth/CustomInput";
 import PasswordInput from "../../components/auth/PasswordInput";
 import PrimaryButton from "../../components/auth/PrimaryButton";
 import SocialButton from "../../components/auth/SocialButton";
+import AuthLoadingOverlay from "../../components/auth/AuthLoadingOverlay"; // ✅ new
 
 import { validateLoginForm } from "../../utils/validation";
 import { useAuth } from "../../hooks/useAuth";
@@ -25,6 +26,7 @@ export default function LoginScreen({ navigation }: any) {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<any>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [googleSubmitting, setGoogleSubmitting] = useState(false); // ✅ new — separate flag for Google flow
 
   const { loginWithEmail, loginWithGoogle } = useAuth();
   const { loading } = useAppSelector((state) => state.auth);
@@ -45,28 +47,26 @@ export default function LoginScreen({ navigation }: any) {
 
     try {
       await loginWithEmail(email.trim(), password);
-
-      // Important: Use reset instead of replace for clean navigation
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "MainTabs" }],
-      });
+      // ✅ fixed — no manual navigation.reset here. RootNavigator watches
+      // Redux `user` state and automatically switches to MainTabs once the
+      // auth listener updates it. Manually resetting to "MainTabs" before
+      // that happens targets a route that doesn't exist yet in the current
+      // (auth-only) navigator, which was causing the blank white screen.
+      // isSubmitting stays true — the overlay covers the transition until
+      // this screen unmounts on its own.
     } catch (error: any) {
+      setIsSubmitting(false); // ✅ only clear on failure — success keeps overlay up until unmount
       Alert.alert("Login Failed", error.message || "Something went wrong");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    setGoogleSubmitting(true);
     try {
       await loginWithGoogle();
-
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "MainTabs" }],
-      });
+      // ✅ same reasoning — let RootNavigator switch automatically
     } catch (error: any) {
+      setGoogleSubmitting(false);
       Alert.alert(
         "Google Sign In Failed",
         error.message || "Something went wrong",
@@ -121,6 +121,7 @@ export default function LoginScreen({ navigation }: any) {
               title="Continue"
               onPress={handleLogin}
               loading={isSubmitting || loading}
+              disabled={isSubmitting || googleSubmitting} // ✅ new — block double-submit
             />
 
             <View style={styles.dividerContainer}>
@@ -133,7 +134,7 @@ export default function LoginScreen({ navigation }: any) {
               title="Login with Google"
               icon={require("../../assets/img/google.png")}
               onPress={handleGoogleLogin}
-              loading={loading}
+              loading={googleSubmitting} // ✅ fixed — was `loading` (Redux flag unrelated to this button)
             />
 
             <View style={styles.bottom}>
@@ -145,6 +146,13 @@ export default function LoginScreen({ navigation }: any) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ✅ new — full-screen overlay covers the gap between successful auth
+          and RootNavigator switching to MainTabs */}
+      <AuthLoadingOverlay
+        visible={isSubmitting || googleSubmitting}
+        label="Signing you in..."
+      />
     </AppContainer>
   );
 }

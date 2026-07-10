@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import BackButton from "../../components/auth/BackButton";
 import Colors from "../../constants/Colors";
-import { RootStackScreenProps } from "../../navigation/types"; // ✅ updated — replaces `any`
+import { RootStackScreenProps } from "../../navigation/types";
 
 const { width, height } = Dimensions.get("window");
 
@@ -19,31 +19,33 @@ type Props = RootStackScreenProps<"ViewImage">;
 
 export default function ViewImageScreen({ navigation, route }: Props) {
   const { imageUri } = route.params;
-  const [loading, setLoading] = useState(true); // ✅ new
+  const [loading, setLoading] = useState(true);
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />{" "}
-      {/* ✅ new — keeps icons visible on black bg */}
+      {/* ✅ fixed — removed stray {" "} text node that was sitting outside <Text> */}
+      <StatusBar barStyle="light-content" />
+
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.header}>
           <BackButton onPress={() => navigation.goBack()} />
         </View>
       </SafeAreaView>
+
       <View style={styles.imageWrapper}>
         {!!imageUri && (
           <Image
             source={{ uri: imageUri }}
             style={styles.image}
             resizeMode="contain"
-            onLoadEnd={() => setLoading(false)} // ✅ new
+            onLoadEnd={() => setLoading(false)}
           />
         )}
         {loading && (
           <ActivityIndicator
             size="large"
             color={Colors.onImage}
-            style={styles.loader} // ✅ new
+            style={styles.loader}
           />
         )}
       </View>
@@ -77,7 +79,6 @@ const styles = StyleSheet.create({
     height,
   },
   loader: {
-    // ✅ new — sits centered over the image area while it decodes
     position: "absolute",
   },
 });

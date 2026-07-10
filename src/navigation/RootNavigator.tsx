@@ -1,4 +1,6 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { View, ActivityIndicator, StyleSheet, Text } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context"; // ✅ new
 import { useAppSelector } from "../redux/store/hooks";
 import TabNavigator from "./TabNavigator";
 import LoginScreen from "../screens/auth/LoginScreen";
@@ -10,17 +12,28 @@ import UpdatePasswordScreen from "../screens/auth/UpdatePasswordScreen";
 import SuccessScreen from "../screens/auth/SuccessScreen";
 import AccountCreateMessageScreen from "../screens/auth/AccountCreateMessageScreen";
 import ViewImageScreen from "../screens/common/ViewImageScreen";
-import MessageScreen from "../screens/common/MessageScreen"; // ✅ confirm this path matches your Explorer (screens/common)
-import StoryViewerScreen from "../screens/common/StoryViewerScreen"; // ✅ new
-import { RootStackParamList } from "./types"; // ✅ add
+import MessageScreen from "../screens/common/MessageScreen";
+import StoryViewerScreen from "../screens/common/StoryViewerScreen";
+import { RootStackParamList } from "./types";
+import Colors from "../constants/Colors";
 
-const RootStack = createNativeStackNavigator<RootStackParamList>(); // ✅ typed generic
+const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
   const { user, loading } = useAppSelector((state) => state.auth);
 
   if (loading) {
-    return null;
+    return (
+      // ✅ fixed — SafeAreaView + explicit flex:1 on both container levels
+      // guarantees full-screen coverage; larger, high-contrast spinner +
+      // label so it reads as an intentional loading screen, not a glitch
+      <SafeAreaView style={styles.loadingSafeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -37,7 +50,7 @@ export default function RootNavigator() {
         options={{ headerShown: false, presentation: "fullScreenModal" }}
       />
       <RootStack.Screen
-        name="StoryViewer" // ✅ new — Instagram-style story viewer, full-screen modal like ViewImage
+        name="StoryViewer"
         component={StoryViewerScreen}
         options={{ headerShown: false, presentation: "fullScreenModal" }}
       />
@@ -77,3 +90,21 @@ export default function RootNavigator() {
     </RootStack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingSafeArea: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 14,
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.textSecondary,
+  },
+});
