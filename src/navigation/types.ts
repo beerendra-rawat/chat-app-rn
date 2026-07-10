@@ -17,14 +17,10 @@ export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
   ForgotPassword: undefined;
-  VerifyCode: undefined;
-  PasswordReset: undefined;
-  UpdatePassword: undefined;
-  Success: undefined;
+  VerifyCode: { email: string };
   ViewImage: {
     imageUri: string;
   };
-  AccountCreatedSuccess: undefined;
   ChatDetail: {
     chatId: string;
     otherUserId: string;

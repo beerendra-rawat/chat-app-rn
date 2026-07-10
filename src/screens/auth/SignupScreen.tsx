@@ -16,7 +16,7 @@ import AuthHeader from "../../components/auth/AuthHeader";
 import CustomInput from "../../components/auth/CustomInput";
 import PasswordInput from "../../components/auth/PasswordInput";
 import PrimaryButton from "../../components/auth/PrimaryButton";
-import AuthLoadingOverlay from "../../components/auth/AuthLoadingOverlay"; // ✅ new
+import AuthLoadingOverlay from "../../components/auth/AuthLoadingOverlay";
 
 import { useAuth } from "../../hooks/useAuth";
 import { useAppSelector } from "../../redux/store/hooks";
@@ -26,7 +26,7 @@ export default function SignupScreen({ navigation }: any) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false); // ✅ new
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { signupWithEmail } = useAuth();
   const { loading } = useAppSelector((state) => state.auth);
@@ -38,14 +38,19 @@ export default function SignupScreen({ navigation }: any) {
       return;
     }
 
-    setIsSubmitting(true); // ✅ new
+    setIsSubmitting(true);
     try {
-      const user = await signupWithEmail(fullName, email, password);
-      navigation.replace("AccountCreatedSuccess"); // ✅ unchanged — valid route in auth stack
+      await signupWithEmail(fullName, email, password);
+
+      // ✅ fixed — no signOut, no manual navigation, no suppressNavigation flag.
+      // Firebase's createUserWithEmailAndPassword already signs the user in;
+      // once the auth listener updates Redux `user`, RootNavigator switches
+      // to MainTabs automatically. This works WITH Firebase's behavior
+      // instead of fighting it, which eliminates every timing race we were
+      // chasing before. isSubmitting stays true until this screen unmounts.
     } catch (error: any) {
+      setIsSubmitting(false); // only clear on failure — success keeps overlay up until unmount
       Alert.alert("Signup Failed", error.message || "Something went wrong.");
-    } finally {
-      setIsSubmitting(false); // ✅ new — safe here since this doesn't cross navigator branches
     }
   };
 
@@ -94,8 +99,8 @@ export default function SignupScreen({ navigation }: any) {
             <PrimaryButton
               title="Create Account"
               onPress={handleSignup}
-              loading={isSubmitting || loading} // ✅ fixed — was text-swap, now a real loader
-              disabled={isSubmitting} // ✅ new — block double-submit
+              loading={isSubmitting || loading}
+              disabled={isSubmitting}
             />
 
             <View style={styles.bottomContainer}>
@@ -111,7 +116,6 @@ export default function SignupScreen({ navigation }: any) {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* ✅ new */}
       <AuthLoadingOverlay
         visible={isSubmitting}
         label="Creating your account..."

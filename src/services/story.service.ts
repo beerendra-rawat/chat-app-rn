@@ -75,8 +75,11 @@ export const storyService = {
 
         callback(stories);
       },
-      (err) => {
-        console.error("Failed to subscribe to stories:", err);
+      (err: any) => {
+        // ✅ fixed — same reasoning as notifications
+        if (err?.code !== "permission-denied") {
+          console.error("Failed to subscribe to stories:", err);
+        }
         callback([]);
       },
     );

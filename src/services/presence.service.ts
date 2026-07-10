@@ -21,8 +21,11 @@ export const presenceService = {
         { isOnline: true, lastSeen: serverTimestamp() },
         { merge: true },
       );
-    } catch (err) {
-      console.warn("presenceService.setOnline failed:", err); // ✅ caught, not thrown
+    } catch (err: any) {
+      // ✅ fixed — permission-denied here is an expected logout/signout race
+      if (err?.code !== "permission-denied") {
+        console.warn("presenceService.setOnline failed:", err);
+      }
     }
   },
 

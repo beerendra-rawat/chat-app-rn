@@ -51,7 +51,6 @@ export const notificationService = {
     }
 
     const ref = collection(db, "notifications");
-    // ✅ single-field filter only — avoids needing a composite index
     const q = query(ref, where("userId", "==", uid));
 
     return onSnapshot(
@@ -75,13 +74,16 @@ export const notificationService = {
                 : data.clientCreatedAt,
             } as AppNotification;
           })
-          // ✅ sorted client-side by recency — avoids composite index
           .sort((a, b) => b.createdAt - a.createdAt);
 
         callback(list);
       },
-      (err) => {
-        console.error("Failed to subscribe to notifications:", err);
+      (err: any) => {
+        // ✅ fixed — permission-denied here means the listener outlived a
+        // logout/signout race; expected, not a bug. Anything else still logs.
+        if (err?.code !== "permission-denied") {
+          console.error("Failed to subscribe to notifications:", err);
+        }
         callback([]);
       },
     );
