@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet } from 'react-native';
-import Colors from '../../constants/Colors';
+import { View, Text, StyleSheet } from "react-native";
+import Colors from "../../constants/Colors";
 
 type Props = {
   title: string;
@@ -19,7 +19,7 @@ const styles = StyleSheet.create({
   container: { marginBottom: 32 },
   title: {
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: "700",
     color: Colors.text,
     marginBottom: 8,
   },

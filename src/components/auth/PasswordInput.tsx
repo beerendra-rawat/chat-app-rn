@@ -23,7 +23,7 @@ export default function PasswordInput({
 }: Props) {
   const [secure, setSecure] = useState(true);
   return (
-    <View style={styles.container}>
+    <View>
       <Text style={styles.label}>{label}</Text>
 
       <View style={styles.inputContainer}>
@@ -45,10 +45,6 @@ export default function PasswordInput({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginTop: 14,
-  },
-
   label: {
     fontSize: 15,
     marginBottom: 8,
