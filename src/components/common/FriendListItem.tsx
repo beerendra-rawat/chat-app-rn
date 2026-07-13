@@ -23,12 +23,16 @@ export default function FriendListItem({
   onRemove,
   onPress,
 }: Props) {
+  // ✅ only friend rows navigate to chat on tap — request rows shouldn't
+  // open a chat until the request is actually accepted
+  const isTappable = mode === "friend";
+
   return (
-    // ✅ whole row is tappable
     <TouchableOpacity
       style={styles.container}
-      activeOpacity={0.7}
-      onPress={() => onPress?.(user)}
+      activeOpacity={isTappable ? 0.7 : 1} // ✅ no press feedback for requests
+      disabled={!isTappable} // ✅ blocks navigation entirely for requests
+      onPress={isTappable ? () => onPress?.(user) : undefined}
     >
       <UserAvatar image={user.avatar} size={50} />
 
