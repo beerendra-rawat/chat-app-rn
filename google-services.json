@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "314645370562",
+    "project_id": "chat-app-2475b",
+    "storage_bucket": "chat-app-2475b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:314645370562:android:d52a518880c0c941be0d5b",
+        "android_client_info": {
+          "package_name": "com.beerendra.chatapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "314645370562-mv8jsl0k414lh44o2c40jeeb82291kbp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.beerendra.chatapp",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "314645370562-q19hruee9tpgksfrkp0vsuj82r381po6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtaaA--Qhf1gfeWkB-7XuMBpJbzXBjEtA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "314645370562-q19hruee9tpgksfrkp0vsuj82r381po6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "314645370562-6pcactlji6on80elmgkqem729793nqcd.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.beerendra.chatapp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

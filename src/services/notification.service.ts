@@ -11,6 +11,7 @@ import {
   writeBatch,
   getDocs,
   Timestamp,
+  limit,
 } from "firebase/firestore";
 import { AppNotification, NotificationType } from "../types/notification";
 
@@ -27,6 +28,43 @@ export const notificationService = {
     if (!params.userId || params.userId === params.fromUserId) return; // never notify yourself
 
     const ref = collection(db, "notifications");
+
+    // For message notifications, collapse to ONE row per conversation
+    // instead of one row per message. Look for an existing notification
+    // from THIS sender, to THIS recipient, in THIS chat, and update it in
+    // place rather than creating a duplicate.
+    if (params.type === "message" && params.chatId) {
+      const existingQuery = query(
+        ref,
+        where("userId", "==", params.userId),
+        where("chatId", "==", params.chatId),
+        where("type", "==", "message"),
+        where("fromUserId", "==", params.fromUserId), // ✅ fix — required so
+        // Firestore can statically verify this query only ever matches
+        // documents the security rule's "sender" OR-branch allows. Without
+        // this, Firestore can't prove the query is safe and rejects it
+        // with "Missing or insufficient permissions" even though the rule
+        // itself is correct.
+        limit(1),
+      );
+      const existingSnapshot = await getDocs(existingQuery);
+
+      if (!existingSnapshot.empty) {
+        const existingDoc = existingSnapshot.docs[0];
+        await updateDoc(existingDoc.ref, {
+          message: params.message ?? null,
+          fromUserName: params.fromUserName,
+          fromUserAvatar: params.fromUserAvatar ?? null,
+          isRead: false, // new message re-marks it unread
+          createdAt: serverTimestamp(), // bumps it back to the top / "Today"
+          clientCreatedAt: Date.now(),
+        });
+        return;
+      }
+    }
+
+    // Friend requests and friend_request_accepted still insert fresh —
+    // those are one-time events per relationship, not an ongoing stream
     await addDoc(ref, {
       userId: params.userId,
       type: params.type,
@@ -79,7 +117,7 @@ export const notificationService = {
         callback(list);
       },
       (err: any) => {
-        // ✅ fixed — permission-denied here means the listener outlived a
+        // permission-denied here means the listener outlived a
         // logout/signout race; expected, not a bug. Anything else still logs.
         if (err?.code !== "permission-denied") {
           console.error("Failed to subscribe to notifications:", err);
@@ -97,7 +135,7 @@ export const notificationService = {
 
   async markAllAsRead(uid: string) {
     const ref = collection(db, "notifications");
-    const q = query(ref, where("userId", "==", uid)); // ✅ single-field query
+    const q = query(ref, where("userId", "==", uid));
     const snapshot = await getDocs(q);
 
     const unread = snapshot.docs.filter((d) => !d.data().isRead);
