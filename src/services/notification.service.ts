@@ -39,12 +39,7 @@ export const notificationService = {
         where("userId", "==", params.userId),
         where("chatId", "==", params.chatId),
         where("type", "==", "message"),
-        where("fromUserId", "==", params.fromUserId), // ✅ fix — required so
-        // Firestore can statically verify this query only ever matches
-        // documents the security rule's "sender" OR-branch allows. Without
-        // this, Firestore can't prove the query is safe and rejects it
-        // with "Missing or insufficient permissions" even though the rule
-        // itself is correct.
+        where("fromUserId", "==", params.fromUserId),
         limit(1),
       );
       const existingSnapshot = await getDocs(existingQuery);
@@ -143,6 +138,29 @@ export const notificationService = {
 
     const batch = writeBatch(db);
     unread.forEach((d) => batch.update(d.ref, { isRead: true }));
+    await batch.commit();
+  },
+
+  // ✅ new — marks a message notification read by chatId + recipient,
+  // rather than by notification doc id. Call this from MessageScreen when
+  // the user opens a chat directly (not via tapping the notification row),
+  // so the badge/list correctly reflects that they've seen the messages
+  // either way they got there.
+  async markChatNotificationsAsRead(uid: string, chatId: string) {
+    const ref = collection(db, "notifications");
+    const q = query(
+      ref,
+      where("userId", "==", uid),
+      where("chatId", "==", chatId),
+      where("type", "==", "message"),
+      where("isRead", "==", false),
+    );
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) return;
+
+    const batch = writeBatch(db);
+    snapshot.docs.forEach((d) => batch.update(d.ref, { isRead: true }));
     await batch.commit();
   },
 };

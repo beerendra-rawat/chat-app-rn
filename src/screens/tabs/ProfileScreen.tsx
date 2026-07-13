@@ -260,6 +260,6 @@ const styles = StyleSheet.create({
   spacer: { minHeight: 40 }, // ✅ changed — see note below
   logoutButton: {
     backgroundColor: "#EF4444",
-    marginTop: 40,
+    marginTop: 200,
   },
 });

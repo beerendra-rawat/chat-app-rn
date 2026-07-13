@@ -1,16 +1,50 @@
 import * as admin from "firebase-admin";
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { onDocumentWritten } from "firebase-functions/v2/firestore";
 
 admin.initializeApp();
 
-// Fires automatically whenever your client calls
-// notificationService.createNotification() and a new doc lands in
-// /notifications — this is the server-side piece your client can't do itself.
-export const sendPushOnNotificationCreate = onDocumentCreated(
+export const sendPushOnNotificationWrite = onDocumentWritten(
   "notifications/{notificationId}",
   async (event) => {
-    const notification = event.data?.data();
-    if (!notification) return;
+    // ──────────────────────────────────────────────────────────
+    // event.data.before → the document's data BEFORE this write
+    //   - undefined if this was a CREATE (didn't exist before)
+    // event.data.after  → the document's data AFTER this write
+    //   - undefined if this was a DELETE (doesn't exist after)
+    // ──────────────────────────────────────────────────────────
+    const before = event.data?.before?.data();
+    const after = event.data?.after?.data();
+
+    // 🗑️ DELETE case — `after` is undefined when a doc was deleted.
+    // Nothing to notify about, so bail out immediately.
+    if (!after) {
+      console.log("Notification deleted — no push to send");
+      return;
+    }
+
+    // ✏️ UPDATE case — `before` exists AND `after` exists.
+    // This is what happens on your 2nd/3rd message in the same chat
+    // (the upsert logic calling updateDoc), AND also what happens when
+    // markAsRead/markAllAsRead flips isRead to true. We only want to
+    // push for the FIRST kind (new message content), not the second
+    // (read-state change) — this guard tells them apart.
+    const isReadOnlyChange =
+      before &&
+      after.message === before.message &&
+      after.fromUserName === before.fromUserName &&
+      after.type === before.type;
+
+    if (isReadOnlyChange) {
+      console.log("Skipping push — only isRead changed (markAsRead case)");
+      return;
+    }
+
+    // ➕ CREATE case — `before` is undefined, `after` exists.
+    // This is your 1st message in a new conversation, or a fresh
+    // friend_request / friend_request_accepted doc.
+    // (No special handling needed here — it just falls through to the
+    // same push-sending logic below, since both CREATE and a genuine
+    // content UPDATE should result in a push.)
 
     const {
       userId,
@@ -20,9 +54,8 @@ export const sendPushOnNotificationCreate = onDocumentCreated(
       chatId,
       fromUserId,
       fromUserAvatar,
-    } = notification;
+    } = after;
 
-    // Look up the recipient's saved device tokens
     const userDoc = await admin
       .firestore()
       .collection("users")
@@ -35,8 +68,6 @@ export const sendPushOnNotificationCreate = onDocumentCreated(
       return;
     }
 
-    // Build the notification text based on type — same categories your
-    // NotificationScreen already handles
     let title = "New notification";
     let body = "";
 
@@ -76,7 +107,6 @@ export const sendPushOnNotificationCreate = onDocumentCreated(
         `Push sent: ${response.successCount} success, ${response.failureCount} failed`,
       );
 
-      // Clean up dead/invalid tokens so they don't keep failing
       const invalidTokens: string[] = [];
       response.responses.forEach((res, idx) => {
         if (
