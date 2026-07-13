@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, TextInput, StyleSheet, TouchableOpacity } from "react-native";
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 interface SearchBarProps {
@@ -19,12 +26,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
   autoFocus = false,
   debounceMs = 300,
 }) => {
-  // ✅ Local, uncontrolled-feeling state — typing always updates this instantly,
+  // Local, uncontrolled-feeling state — typing always updates this instantly,
   // regardless of how slow/expensive the parent's search logic is.
   const [text, setText] = useState(value);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ✅ Sync from parent only when it changes externally (e.g. cleared elsewhere)
+  // Sync from parent only when it changes externally (e.g. cleared elsewhere)
   useEffect(() => {
     if (value !== text) {
       setText(value);
@@ -33,11 +40,11 @@ const SearchBar: React.FC<SearchBarProps> = ({
   }, [value]);
 
   const handleChangeText = (newText: string) => {
-    setText(newText); // ✅ updates immediately, so every keystroke shows up
+    setText(newText); // updates immediately, so every keystroke shows up
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      onChangeText(newText); // ✅ parent (and its expensive search) only runs after pause
+      onChangeText(newText); // parent (and its expensive search) only runs after pause
     }, debounceMs);
   };
 
@@ -55,23 +62,37 @@ const SearchBar: React.FC<SearchBarProps> = ({
   }, []);
 
   return (
-    <View style={styles.container}>
-      <Feather name="search" size={20} color="#777" style={styles.searchIcon} />
-      <TextInput
-        value={text}
-        onChangeText={handleChangeText}
-        placeholder={placeholder}
-        placeholderTextColor="#999"
-        autoFocus={autoFocus}
-        style={styles.input}
-        returnKeyType="search"
-      />
-      {text.length > 0 && (
-        <TouchableOpacity activeOpacity={0.7} onPress={handleClear}>
-          <Feather name="x-circle" size={20} color="#777" />
-        </TouchableOpacity>
-      )}
-    </View>
+    // ✅ new — keeps the search bar clear of the keyboard if it's ever
+    // positioned near the bottom of a screen. No visible effect when
+    // used at the top of a screen (e.g. above a FlatList), since there's
+    // nothing below it for the keyboard to cover.
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
+    >
+      <View style={styles.container}>
+        <Feather
+          name="search"
+          size={20}
+          color="#777"
+          style={styles.searchIcon}
+        />
+        <TextInput
+          value={text}
+          onChangeText={handleChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="#999"
+          autoFocus={autoFocus}
+          style={styles.input}
+          returnKeyType="search"
+        />
+        {text.length > 0 && (
+          <TouchableOpacity activeOpacity={0.7} onPress={handleClear}>
+            <Feather name="x-circle" size={20} color="#777" />
+          </TouchableOpacity>
+        )}
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 

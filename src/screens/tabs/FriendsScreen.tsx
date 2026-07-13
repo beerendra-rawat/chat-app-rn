@@ -16,7 +16,7 @@ import PeopleListSkeleton from "../../components/common/PeopleListSkeleton";
 import { useAppSelector } from "../../redux/store/hooks";
 import { useUserProfiles } from "../../hooks/queries/useUserProfiles";
 import { useFriendMutations } from "../../hooks/queries/useFriendMutations";
-import { RootStackParamList } from "../../navigation/types";
+import { RootStackParamList } from "../../types/navigation";
 import { User } from "../../types/user";
 import Colors from "../../constants/Colors";
 

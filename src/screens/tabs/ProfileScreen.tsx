@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView, // ✅ new
+  Platform, // ✅ new
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -32,10 +34,8 @@ export default function ProfileScreen({ navigation }: any) {
     saveProfile,
     saving,
     uploadingImage,
-  } = useProfile(); // ✅ fixed — removed refetchProfile, useProfile doesn't expose it
+  } = useProfile();
 
-  // ✅ pull-to-refresh gesture only — profile data is already live from
-  // useAppSelector/useProfile's own subscription, nothing to manually refetch
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
@@ -69,95 +69,119 @@ export default function ProfileScreen({ navigation }: any) {
   }
 
   return (
-    <AppContainer scrollable refreshing={refreshing} onRefresh={handleRefresh}>
-      {/* Edit Button */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => (isEditing ? saveProfile() : setIsEditing(true))}
-          disabled={saving}
-        >
-          <Ionicons
-            name={isEditing ? "checkmark" : "create-outline"}
-            size={28}
-            color="#4F46E5"
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* Avatar */}
-      <TouchableOpacity
-        style={styles.avatarContainer}
-        onPress={
-          isEditing
-            ? !uploadingImage
-              ? handleAvatarPress
-              : undefined
-            : profileImage
-              ? () =>
-                  navigation.navigate("ViewImage", { imageUri: profileImage })
-              : undefined
-        }
-        activeOpacity={0.8}
-        disabled={uploadingImage}
+    // ✅ new — lets the ScrollView content resize/reposition when the
+    // keyboard opens, so you can actually scroll to fields hidden behind it
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
+    >
+      <AppContainer
+        scrollable
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        keyboardShouldPersistTaps="handled" // ✅ new — taps on buttons work while keyboard is open
       >
-        {profileImage ? (
-          <Image source={{ uri: profileImage }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Ionicons name="person" size={70} color="#9CA3AF" />
-          </View>
-        )}
-
-        {uploadingImage && (
-          <View style={styles.avatarOverlay}>
-            <ActivityIndicator size="large" color="#fff" />
-          </View>
-        )}
-
-        {isEditing && !uploadingImage && (
-          <View style={styles.cameraButton}>
-            <Ionicons name="camera" size={20} color="#fff" />
-          </View>
-        )}
-      </TouchableOpacity>
-
-      {/* Name & Bio */}
-      {!isEditing ? (
-        <>
-          <Text style={styles.name}>{fullName}</Text>
-          <Text style={styles.bio}>{bio || "No bio yet"}</Text>
-        </>
-      ) : (
-        <View style={styles.form}>
-          <CustomInput
-            label="Full Name"
-            value={fullName}
-            onChangeText={setFullName}
-          />
-          <CustomInput
-            label="Bio"
-            placeholder="Write something about yourself..."
-            value={bio}
-            onChangeText={setBio}
-            multiline
-            numberOfLines={4}
-          />
+        {/* Edit Button */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => (isEditing ? saveProfile() : setIsEditing(true))}
+            disabled={saving}
+          >
+            <Ionicons
+              name={isEditing ? "checkmark" : "create-outline"}
+              size={28}
+              color="#4F46E5"
+            />
+          </TouchableOpacity>
         </View>
-      )}
 
-      <View style={{ flex: 1 }} />
+        {/* Avatar */}
+        <TouchableOpacity
+          style={styles.avatarContainer}
+          onPress={
+            isEditing
+              ? !uploadingImage
+                ? handleAvatarPress
+                : undefined
+              : profileImage
+                ? () =>
+                    navigation.navigate("ViewImage", {
+                      imageUri: profileImage,
+                    })
+                : undefined
+          }
+          activeOpacity={0.8}
+          disabled={uploadingImage}
+        >
+          {profileImage ? (
+            <Image source={{ uri: profileImage }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Ionicons name="person" size={70} color="#9CA3AF" />
+            </View>
+          )}
 
-      <PrimaryButton
-        title="Logout"
-        onPress={handleLogout}
-        style={styles.logoutButton}
-      />
-    </AppContainer>
+          {uploadingImage && (
+            <View style={styles.avatarOverlay}>
+              <ActivityIndicator size="large" color="#fff" />
+            </View>
+          )}
+
+          {isEditing && !uploadingImage && (
+            <View style={styles.cameraButton}>
+              <Ionicons name="camera" size={20} color="#fff" />
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* Name & Bio */}
+        {!isEditing ? (
+          <>
+            <Text style={styles.name}>{fullName}</Text>
+            <Text style={styles.bio}>{bio || "No bio yet"}</Text>
+          </>
+        ) : (
+          <View style={styles.form}>
+            <CustomInput
+              label="Full Name"
+              value={fullName}
+              onChangeText={setFullName}
+              autoComplete="off" // ✅ new — stops OS suggesting old saved values
+              autoCorrect={false} // ✅ new
+              textContentType="none" // ✅ new — iOS: disables QuickType suggestion bar
+              importantForAutofill="no" // ✅ new — Android equivalent
+            />
+            <CustomInput
+              label="Bio"
+              placeholder="Write something about yourself..."
+              value={bio}
+              onChangeText={setBio}
+              multiline
+              numberOfLines={4}
+              autoComplete="off" // ✅ new
+              autoCorrect={false} // ✅ new
+              textContentType="none" // ✅ new
+              importantForAutofill="no" // ✅ new
+            />
+          </View>
+        )}
+
+        <View style={styles.spacer} />
+
+        <PrimaryButton
+          title="Logout"
+          onPress={handleLogout}
+          style={styles.logoutButton}
+        />
+      </AppContainer>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 }, // ✅ new
   header: {
     width: "100%",
     alignItems: "flex-end",
@@ -233,6 +257,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   form: { marginTop: 10, gap: 16 },
+  spacer: { minHeight: 40 }, // ✅ changed — see note below
   logoutButton: {
     backgroundColor: "#EF4444",
     marginTop: 40,
