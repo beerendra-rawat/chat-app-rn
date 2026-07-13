@@ -27,6 +27,7 @@ import { usePresence } from "../../hooks/usePresence";
 import { pickImageFromLibrary } from "../../utils/imagePicker";
 import { uploadToCloudinary } from "../../utils/uploadToCloudinary";
 import Colors from "../../constants/Colors";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type Props = RootStackScreenProps<"ChatDetail">;
 
@@ -169,17 +170,19 @@ export default function MessageScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        <MessageInput
-          value={text}
-          onChangeText={setText}
-          onSend={sendMessage}
-          onEmojiPress={toggleEmojiPicker}
-          onPickImage={handlePickImage}
-          onFocus={handleInputFocus}
-          editable={!uploadingImage}
-        />
+        <SafeAreaView edges={["bottom"]} style={styles.bottomSafeArea}>
+          <MessageInput
+            value={text}
+            onChangeText={setText}
+            onSend={sendMessage}
+            onEmojiPress={toggleEmojiPicker}
+            onPickImage={handlePickImage}
+            onFocus={handleInputFocus}
+            editable={!uploadingImage}
+          />
 
-        {showEmojiPicker && <EmojiPicker onSelect={handleEmojiSelect} />}
+          {showEmojiPicker && <EmojiPicker onSelect={handleEmojiSelect} />}
+        </SafeAreaView>
       </KeyboardAvoidingView>
     </AppContainer>
   );
@@ -202,4 +205,5 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F6F8",
   },
   uploadingText: { marginLeft: 8, fontSize: 13, color: Colors.textSecondary },
+  bottomSafeArea: { backgroundColor: Colors.background },
 });

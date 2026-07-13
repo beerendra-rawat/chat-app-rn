@@ -56,7 +56,7 @@ export default function AppContainer({
       />
       <SafeAreaView
         style={[styles.safeArea, { backgroundColor }]}
-        edges={["top", "bottom"]}
+        edges={["top"]}
       >
         {scrollable ? (
           <ScrollView
