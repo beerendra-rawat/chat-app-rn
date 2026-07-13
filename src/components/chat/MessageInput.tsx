@@ -98,6 +98,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
     maxHeight: 100,
     paddingVertical: 8,
+    textAlignVertical: "center",
   },
   sendButton: {
     width: 52,

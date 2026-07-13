@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import {
-  SectionList,
+  FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -8,7 +9,7 @@ import {
 } from "react-native";
 import AppContainer from "../../components/common/AppContainer";
 import NotificationItem from "../../components/notification/NotificationItem";
-import NotificationListSkeleton from "../../components/notification/NotificationListSkeleton"; // ✅ new
+import NotificationListSkeleton from "../../components/notification/NotificationListSkeleton";
 import { useAppSelector } from "../../redux/store/hooks";
 import { useNotifications } from "../../hooks/useNotifications";
 import { notificationService } from "../../services/notification.service";
@@ -17,14 +18,21 @@ import { groupByDateLabel } from "../../utils/lastTime";
 import { AppNotification } from "../../types/notification";
 import Colors from "../../constants/Colors";
 
+type FlatRow =
+  | { type: "header"; id: string; title: string }
+  | {
+      type: "item";
+      id: string;
+      notification: AppNotification;
+      isFirstInSection: boolean;
+    };
+
 export default function NotificationScreen({ navigation }: any) {
   const currentUser = useAppSelector((state) => state.auth.user);
   const { notifications, loading, unreadCount } = useNotifications(
     currentUser?.uid,
   );
 
-  // ✅ new — drives AppContainer's built-in RefreshControl instead of
-  // placing one directly on SectionList
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
@@ -37,6 +45,26 @@ export default function NotificationScreen({ navigation }: any) {
     () => groupByDateLabel(notifications, (n) => n.createdAt),
     [notifications],
   );
+
+  const flatData = useMemo<FlatRow[]>(() => {
+    const rows: FlatRow[] = [];
+    sections.forEach((section) => {
+      rows.push({
+        type: "header",
+        id: `header-${section.title}`,
+        title: section.title,
+      });
+      section.data.forEach((notification, index) => {
+        rows.push({
+          type: "item",
+          id: notification.id,
+          notification,
+          isFirstInSection: index === 0,
+        });
+      });
+    });
+    return rows;
+  }, [sections]);
 
   const handleMarkAllRead = useCallback(async () => {
     if (!currentUser?.uid) return;
@@ -99,52 +127,67 @@ export default function NotificationScreen({ navigation }: any) {
     [navigation, currentUser],
   );
 
+  const renderRow = useCallback(
+    ({ item }: { item: FlatRow }) => {
+      if (item.type === "header") {
+        return <Text style={styles.sectionHeader}>{item.title}</Text>;
+      }
+      return (
+        <>
+          {!item.isFirstInSection && <View style={styles.separator} />}
+          <NotificationItem
+            notification={item.notification}
+            onPress={() => handlePressNotification(item.notification)}
+          />
+        </>
+      );
+    },
+    [handlePressNotification],
+  );
+
+  const ListHeader = useMemo(() => {
+    if (unreadCount <= 0) return null;
+    return (
+      <View style={styles.headerRow}>
+        <TouchableOpacity onPress={handleMarkAllRead}>
+          <Text style={styles.markAllText}>Mark all read</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }, [unreadCount, handleMarkAllRead]);
+
   if (loading) {
     return (
       <AppContainer noHorizontalPadding noVerticalPadding>
-        {/* <View style={styles.header}>
-          <Text style={styles.title}>Notifications</Text>
-        </View> */}
         <NotificationListSkeleton />
       </AppContainer>
     );
   }
 
   return (
-    <AppContainer
-      noHorizontalPadding
-      noVerticalPadding
-      scrollable // ✅ new — AppContainer now owns scrolling + pull-to-refresh
-      refreshing={refreshing}
-      onRefresh={handleRefresh}
-    >
-      <View>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={handleMarkAllRead}>
-            <Text style={styles.markAllText}>Mark all read</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => item.id}
-        scrollEnabled={false} // ✅ new — outer AppContainer ScrollView handles scrolling
-        renderItem={({ item }) => (
-          <NotificationItem
-            notification={item}
-            onPress={() => handlePressNotification(item)}
-          />
-        )}
-        renderSectionHeader={({ section: { title } }) => (
-          <Text style={styles.sectionHeader}>{title}</Text>
-        )}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        stickySectionHeadersEnabled={false}
+    // No `scrollable` here — FlatList is now the single scroll owner.
+    <AppContainer noHorizontalPadding noVerticalPadding>
+      <FlatList
+        data={flatData}
+        keyExtractor={(row) => row.id}
+        renderItem={renderRow}
+        style={styles.list}
+        contentContainerStyle={
+          flatData.length === 0 ? styles.emptyContentContainer : undefined
+        }
+        ListHeaderComponent={ListHeader}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyText}>You're all caught up 🎉</Text>
           </View>
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
         }
       />
     </AppContainer>
@@ -152,15 +195,12 @@ export default function NotificationScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  // header: {
-  //   flexDirection: "row",
-  //   justifyContent: "space-between",
-  //   alignItems: "center",
-  //   paddingHorizontal: 16,
-  //   paddingTop: 12,
-  //   paddingBottom: 8,
-  // },
-  // title: { fontSize: 28, fontWeight: "700", color: Colors.text },
+  list: { flex: 1 },
+  headerRow: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
   markAllText: { fontSize: 13, color: Colors.primary, fontWeight: "600" },
   sectionHeader: {
     fontSize: 13,
@@ -182,5 +222,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 100,
   },
+  emptyContentContainer: { flexGrow: 1 },
   emptyText: { color: Colors.textSecondary, fontSize: 15 },
 });

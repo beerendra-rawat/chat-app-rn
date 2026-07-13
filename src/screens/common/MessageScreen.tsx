@@ -8,6 +8,7 @@ import {
   Platform,
   StyleSheet,
   Text,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
@@ -17,7 +18,7 @@ import MessageHeader from "../../components/chat/MessageHeader";
 import MessageInput from "../../components/chat/MessageInput";
 import MessageBubble from "../../components/chat/MessageBubble";
 import EmojiPicker from "../../components/chat/EmojiPicker";
-import { RootStackScreenProps } from "../../navigation/types";
+import { RootStackScreenProps } from "../../types/navigation";
 import { Message } from "../../types/chat";
 import { chatService } from "../../services/chat.service";
 import { useChatMessages } from "../../hooks/useChatMessages";
@@ -107,6 +108,12 @@ export default function MessageScreen({ navigation, route }: Props) {
     if (showEmojiPicker) setShowEmojiPicker(false);
   }, [showEmojiPicker]);
 
+  // Tap anywhere outside the input/list to dismiss keyboard AND close emoji picker
+  const dismissKeyboardAndEmoji = useCallback(() => {
+    Keyboard.dismiss();
+    setShowEmojiPicker(false);
+  }, []);
+
   const renderItem = ({ item }: { item: Message }) => (
     <MessageBubble message={item} isMyMessage={item.senderId === currentUid} />
   );
@@ -122,6 +129,7 @@ export default function MessageScreen({ navigation, route }: Props) {
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.list}
       />
@@ -132,7 +140,11 @@ export default function MessageScreen({ navigation, route }: Props) {
     <AppContainer noHorizontalPadding noVerticalPadding>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        // "height" on Android + windowSoftInputMode="pan" (set in app.json)
+        // is what actually keeps the input visible on physical devices.
+        // "undefined" (your previous value) does nothing on Android.
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
         <MessageHeader
           name={otherUserName}
@@ -143,7 +155,12 @@ export default function MessageScreen({ navigation, route }: Props) {
           onMenuPress={() => {}}
         />
 
-        <View style={styles.body}>{content}</View>
+        <TouchableWithoutFeedback
+          onPress={dismissKeyboardAndEmoji}
+          accessible={false}
+        >
+          <View style={styles.body}>{content}</View>
+        </TouchableWithoutFeedback>
 
         {uploadingImage && (
           <View style={styles.uploadingBar}>
